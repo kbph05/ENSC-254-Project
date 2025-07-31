@@ -29,6 +29,7 @@ typedef struct
   uint32_t    instr_addr;
   /**
    * Add other fields here
+   // Lex
    */
 }ifid_reg_t;
 
@@ -38,6 +39,7 @@ typedef struct
   uint32_t    instr_addr;
   /**
    * Add other fields here
+   // Kirstin
    */
 }idex_reg_t;
 
@@ -47,6 +49,7 @@ typedef struct
   uint32_t    instr_addr;
   /**
    * Add other fields here
+   // Lex
    */
 }exmem_reg_t;
 
@@ -56,6 +59,7 @@ typedef struct
   uint32_t    instr_addr;
   /**
    * Add other fields here
+   // Kirstin
    */
 }memwb_reg_t;
 
@@ -107,6 +111,7 @@ typedef struct
   uint32_t  pc_src1;
   /**
    * Add other fields here
+  // Lex
    */
 }pipeline_wires_t;
 
