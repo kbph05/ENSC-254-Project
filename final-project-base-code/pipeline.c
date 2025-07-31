@@ -18,8 +18,7 @@ simulator_config_t sim_config = {0};
 
 ///////////////////////////////////////////////////////////////////////////////
 
-void bootstrap(pipeline_wires_t* pwires_p, pipeline_regs_t* pregs_p, regfile_t* regfile_p)
-{
+void bootstrap(pipeline_wires_t* pwires_p, pipeline_regs_t* pregs_p, regfile_t* regfile_p) {
   // PC src must get the same value as the default PC value
   pwires_p->pc_src0 = regfile_p->PC;
 }
@@ -32,12 +31,13 @@ void bootstrap(pipeline_wires_t* pwires_p, pipeline_regs_t* pregs_p, regfile_t* 
  * STAGE  : stage_fetch
  * output : ifid_reg_t
  **/ 
-ifid_reg_t stage_fetch(pipeline_wires_t* pwires_p, regfile_t* regfile_p, Byte* memory_p)
-{
+// Lex
+ifid_reg_t stage_fetch(pipeline_wires_t* pwires_p, regfile_t* regfile_p, Byte* memory_p) {
   ifid_reg_t ifid_reg = {0};
   /**
    * YOUR CODE HERE
    */
+  unsigned long long instruction_bits = 0;
 
   #ifdef DEBUG_CYCLE
   printf("[IF ]: Instruction [%08x]@[%08x]: ", instruction_bits, regfile_p->PC);
@@ -51,8 +51,8 @@ ifid_reg_t stage_fetch(pipeline_wires_t* pwires_p, regfile_t* regfile_p, Byte* m
  * STAGE  : stage_decode
  * output : idex_reg_t
  **/ 
-idex_reg_t stage_decode(ifid_reg_t ifid_reg, pipeline_wires_t* pwires_p, regfile_t* regfile_p)
-{
+// Kirstin
+idex_reg_t stage_decode(ifid_reg_t ifid_reg, pipeline_wires_t* pwires_p, regfile_t* regfile_p) {
   idex_reg_t idex_reg = {0};
   /**
    * YOUR CODE HERE
@@ -63,7 +63,8 @@ idex_reg_t stage_decode(ifid_reg_t ifid_reg, pipeline_wires_t* pwires_p, regfile
 /**
  * STAGE  : stage_execute
  * output : exmem_reg_t
- **/ 
+ **/
+// Lex
 exmem_reg_t stage_execute(idex_reg_t idex_reg, pipeline_wires_t* pwires_p)
 {
   exmem_reg_t exmem_reg = {0};
@@ -77,8 +78,8 @@ exmem_reg_t stage_execute(idex_reg_t idex_reg, pipeline_wires_t* pwires_p)
  * STAGE  : stage_mem
  * output : memwb_reg_t
  **/ 
-memwb_reg_t stage_mem(exmem_reg_t exmem_reg, pipeline_wires_t* pwires_p, Byte* memory_p, Cache* cache_p)
-{
+// Kirstin
+memwb_reg_t stage_mem(exmem_reg_t exmem_reg, pipeline_wires_t* pwires_p, Byte* memory_p, Cache* cache_p) {
   memwb_reg_t memwb_reg = {0};
   /**
    * YOUR CODE HERE
@@ -90,8 +91,8 @@ memwb_reg_t stage_mem(exmem_reg_t exmem_reg, pipeline_wires_t* pwires_p, Byte* m
  * STAGE  : stage_writeback
  * output : nothing - The state of the register file may be changed
  **/ 
-void stage_writeback(memwb_reg_t memwb_reg, pipeline_wires_t* pwires_p, regfile_t* regfile_p)
-{
+// Kirstin
+void stage_writeback(memwb_reg_t memwb_reg, pipeline_wires_t* pwires_p, regfile_t* regfile_p) {
   /**
    * YOUR CODE HERE
    */
