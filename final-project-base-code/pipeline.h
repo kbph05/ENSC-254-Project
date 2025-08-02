@@ -20,7 +20,7 @@ extern uint64_t fwd_exex_counter;
 extern uint64_t fwd_exmem_counter;
 
 ///////////////////////////////////////////////////////////////////////////////
-/// RISC-V Pipeline Register Types
+/// RISC-V Pipeline Register Types (encapsulates the data passed between two successive pipeline stages)
 ///////////////////////////////////////////////////////////////////////////////
 
 typedef struct
@@ -33,14 +33,16 @@ typedef struct
    */
 }ifid_reg_t;
 
+// Kirstin
 typedef struct
 {
-  Instruction instr;
-  uint32_t    instr_addr;
-  /**
-   * Add other fields here
-   // Kirstin
-   */
+  Instruction  instr;
+  uint32_t     instr_addr;
+  unsigned int read_rs1;
+  unsigned int read_rs2;
+  int imm;
+  int pc;
+
 }idex_reg_t;
 
 typedef struct
@@ -53,19 +55,19 @@ typedef struct
    */
 }exmem_reg_t;
 
+// Kirstin
 typedef struct
 {
-  Instruction instr;
-  uint32_t    instr_addr;
-  /**
-   * Add other fields here
-   // Kirstin
-   */
+  Instruction  instr;
+  uint32_t     instr_addr;
+  unsigned int alu_result;
+  unsigned int mem_read;
+
 }memwb_reg_t;
 
 
 ///////////////////////////////////////////////////////////////////////////////
-/// Register types with input and output variants for simulator
+/// Register types with input and output variants for simulator (contains a pair of the pipeline registers, ‘inp’ and 'out')
 ///////////////////////////////////////////////////////////////////////////////
 
 typedef struct

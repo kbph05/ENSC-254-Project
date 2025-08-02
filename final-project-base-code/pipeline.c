@@ -37,7 +37,6 @@ ifid_reg_t stage_fetch(pipeline_wires_t* pwires_p, regfile_t* regfile_p, Byte* m
   /**
    * YOUR CODE HERE
    */
-  unsigned long long instruction_bits = 0;
 
   #ifdef DEBUG_CYCLE
   printf("[IF ]: Instruction [%08x]@[%08x]: ", instruction_bits, regfile_p->PC);
@@ -57,6 +56,9 @@ idex_reg_t stage_decode(ifid_reg_t ifid_reg, pipeline_wires_t* pwires_p, regfile
   /**
    * YOUR CODE HERE
    */
+  idex_reg.read_rs1 = regfile_p->R[ifid_reg];
+  idex_reg.read_rs2 = regfile_p->rs2;
+  idex_reg.imm = regfile_p->R
   return idex_reg;
 }
 
@@ -84,6 +86,7 @@ memwb_reg_t stage_mem(exmem_reg_t exmem_reg, pipeline_wires_t* pwires_p, Byte* m
   /**
    * YOUR CODE HERE
    */
+
   return memwb_reg;
 }
 
