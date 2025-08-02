@@ -53,12 +53,12 @@ ifid_reg_t stage_fetch(pipeline_wires_t* pwires_p, regfile_t* regfile_p, Byte* m
 // Kirstin
 idex_reg_t stage_decode(ifid_reg_t ifid_reg, pipeline_wires_t* pwires_p, regfile_t* regfile_p) {
   idex_reg_t idex_reg = {0};
-  /**
-   * YOUR CODE HERE
-   */
-  idex_reg.read_rs1 = regfile_p->R[ifid_reg];
-  idex_reg.read_rs2 = regfile_p->rs2;
-  idex_reg.imm = regfile_p->R
+
+  idex_reg.read_rs1 = ifid_reg.write_rs1; // read rs1 by getting the write_rs1 value from the fetch stage
+  idex_reg.read_rs2 = ifid_reg.write_rs2; // read rs2 by getting the write_rs2 value from the fetch stage
+  idex_reg.read_imm = ifid_reg.write_imm; // read imm by getting the write_imm value from the fetch stage
+  idex_reg.pc = ifid_reg.pc; // set PC to PC from fetch stage
+
   return idex_reg;
 }
 
@@ -83,9 +83,9 @@ exmem_reg_t stage_execute(idex_reg_t idex_reg, pipeline_wires_t* pwires_p)
 // Kirstin
 memwb_reg_t stage_mem(exmem_reg_t exmem_reg, pipeline_wires_t* pwires_p, Byte* memory_p, Cache* cache_p) {
   memwb_reg_t memwb_reg = {0};
-  /**
-   * YOUR CODE HERE
-   */
+  
+  memwb_reg.alu_result = exmem_reg.write_addr; // read the result from alu (write_addr) and write it to alu_result
+  memwb_reg.mem_read = exmem_reg.mem_write; // read the result from memory (mem_write) and write it to mem_read (ehh i dont like these names you can change them)
 
   return memwb_reg;
 }

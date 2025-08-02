@@ -38,9 +38,10 @@ typedef struct
 {
   Instruction  instr;
   uint32_t     instr_addr;
+
   unsigned int read_rs1;
   unsigned int read_rs2;
-  int imm;
+  int read_imm;
   int pc;
 
 }idex_reg_t;
