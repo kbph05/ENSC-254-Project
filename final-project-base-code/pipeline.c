@@ -54,8 +54,8 @@ ifid_reg_t stage_fetch(pipeline_wires_t* pwires_p, regfile_t* regfile_p, Byte* m
 idex_reg_t stage_decode(ifid_reg_t ifid_reg, pipeline_wires_t* pwires_p, regfile_t* regfile_p) {
   idex_reg_t idex_reg = {0};
 
-  idex_reg.read_rs1 = ifid_reg.write_rs1; // read rs1 by getting the write_rs1 value from the fetch stage
-  idex_reg.read_rs2 = ifid_reg.write_rs2; // read rs2 by getting the write_rs2 value from the fetch stage
+  idex_reg.read_rs1 = regfile_p->R[ifid_reg.write_rs1]; // read rs1 by getting the write_rs1 value from the fetch stage
+  idex_reg.read_rs2 = regfile_p->R[ifid_reg.write_rs2]; // read rs2 by getting the write_rs2 value from the fetch stage
   idex_reg.read_imm = ifid_reg.write_imm; // read imm by getting the write_imm value from the fetch stage
   idex_reg.pc = ifid_reg.pc; // set PC to PC from fetch stage
 
@@ -85,7 +85,22 @@ memwb_reg_t stage_mem(exmem_reg_t exmem_reg, pipeline_wires_t* pwires_p, Byte* m
   memwb_reg_t memwb_reg = {0};
   
   memwb_reg.alu_result = exmem_reg.write_addr; // read the result from alu (write_addr) and write it to alu_result
-  memwb_reg.mem_read = exmem_reg.mem_write; // read the result from memory (mem_write) and write it to mem_read (ehh i dont like these names you can change them)
+  Alignment alignment;
+  switch (exmem_reg.instr.itype.funct3) {
+    case 0x0:
+      alignment = LENGTH_BYTE;
+      break;
+    case 0x1:
+      alignment = LENGTH_HALF_WORD;
+      break;
+    case 0x2:
+      alignment = LENGTH_WORD;
+      break;
+    default: 
+      break; 
+  }
+
+  memwb_reg.mem_read = load(memory_p, exmem_reg.instr_addr, ); // read the result from memory and write it to mem_read (ehh i dont like these names you can change them)
 
   return memwb_reg;
 }
@@ -96,9 +111,12 @@ memwb_reg_t stage_mem(exmem_reg_t exmem_reg, pipeline_wires_t* pwires_p, Byte* m
  **/ 
 // Kirstin
 void stage_writeback(memwb_reg_t memwb_reg, pipeline_wires_t* pwires_p, regfile_t* regfile_p) {
-  /**
-   * YOUR CODE HERE
-   */
+  
+  if (mux == 1)
+    regfile_p->R[instr_addr] = memwb_reg.alu_result;
+  else
+    regfile_p->R[instr_addr] = memwb_reg.mem_read;
+
 }
 
 ///////////////////////////////////////////////////////////////////////////////
