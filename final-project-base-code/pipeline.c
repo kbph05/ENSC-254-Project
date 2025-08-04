@@ -34,9 +34,15 @@ void bootstrap(pipeline_wires_t* pwires_p, pipeline_regs_t* pregs_p, regfile_t* 
 // Lex
 ifid_reg_t stage_fetch(pipeline_wires_t* pwires_p, regfile_t* regfile_p, Byte* memory_p) {
   ifid_reg_t ifid_reg = {0};
-  /**
-   * YOUR CODE HERE
-   */
+
+   ifid_reg_t instr_addr = regfile_p->PC //grabs corresponding address
+
+
+   memory_p = regfile_p->R[instr_addr]; //Take an instruction out of the register given the address by PC
+
+
+  unsigned long long instruction_bits = 0;
+  instruction_bits = memory_p + instr.addr; //Adds the address and instruction to the instruction_bits to be carried over
 
   #ifdef DEBUG_CYCLE
   printf("[IF ]: Instruction [%08x]@[%08x]: ", instruction_bits, regfile_p->PC);
@@ -70,9 +76,7 @@ idex_reg_t stage_decode(ifid_reg_t ifid_reg, pipeline_wires_t* pwires_p, regfile
 exmem_reg_t stage_execute(idex_reg_t idex_reg, pipeline_wires_t* pwires_p)
 {
   exmem_reg_t exmem_reg = {0};
-  /**
-   * YOUR CODE HERE
-   */
+  exmem_reg = execute_instruction(instruction_bits, idex_reg, pwires_p); //I think I just need to input whatever input we are doing? I hope, idk
   return exmem_reg;
 }
 
