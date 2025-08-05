@@ -35,20 +35,36 @@ void bootstrap(pipeline_wires_t* pwires_p, pipeline_regs_t* pregs_p, regfile_t* 
 ifid_reg_t stage_fetch(pipeline_wires_t* pwires_p, regfile_t* regfile_p, Byte* memory_p) {
   ifid_reg_t ifid_reg = {0};
 
-  ifid_reg.instr_addr = regfile_p->PC; //grabs corresponding address
+  // ifid_reg.instr_addr = regfile_p->PC; //grabs corresponding address
 
 
-  memory_p = regfile_p->R[ifid_reg.pc]; //Take an instruction out of the register given the address by PC
+  // memory_p = regfile_p->R[ifid_reg.pc]; //Take an instruction out of the register given the address by PC
 
 
-  unsigned long long instruction_bits = 0;
-  instruction_bits = memory_p + ifid_reg.instr_addr; //Adds the address and instruction to the instruction_bits to be carried over
+  // unsigned long long instruction_bits = 0;
+  // instruction_bits = memory_p + ifid_reg.instr_addr; //Adds the address and instruction to the instruction_bits to be carried over
+
+  if (regfile_p->PC < MEMORY_SPACE -3) {
+    instruction_bits = (memory_p[regfile_p->PC + 3] << 24) |
+                      (memory_p[regfile_p->PC + 2] << 16) |
+                      (memory_p[regfile_p->PC + 1] << 8) |
+                      (memory_p[regfile_p->PC]);
+  }
+
+  if (instruction_bits == 0) {
+    instruction_bits = 0x00000013; // NOP instruction
+  }
+  regfile_p.instr = parse_instruction(instruction_bits); // parse the instruction bits into an Instruction struct
+  regfile_p.instr_addr = regfile_p->PC; // set the instruction address to the current PC
+
+  if (!pwires_p->stall) { //Decode must check if pc stalls
+    PC += 4;
+  }
 
   #ifdef DEBUG_CYCLE
   printf("[IF ]: Instruction [%08x]@[%08x]: ", instruction_bits, regfile_p->PC);
   decode_instruction(instruction_bits);
   #endif
-  ifid_reg.instr_addr = regfile_p->PC;
   return ifid_reg;
 }
 
