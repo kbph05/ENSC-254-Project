@@ -12,8 +12,7 @@
  * output : uint32_t alu_control signal
  * Lex
  **/
-uint32_t gen_alu_control(idex_reg_t idex_reg)
-{
+uint32_t gen_alu_control(idex_reg_t idex_reg) {
   uint32_t alu_control = 0;
   // Lex
   switch (idex_reg.read_opcode) {
@@ -187,76 +186,54 @@ uint32_t gen_alu_control(idex_reg_t idex_reg)
  **/
 uint32_t execute_alu(uint32_t alu_inp1, uint32_t alu_inp2, uint32_t alu_control) {
   uint32_t result;
-  switch (alu_control)
-  {
-  case 0x0: // add
-    result = alu_inp1 + alu_inp2;
-    break;
-
-  case 0x1: // sub
-    result = alu_inp1 - alu_inp2;
-    break;
-  case 0x2: // and
-    result = alu_inp1 & alu_inp2;
-    break;
-
-  case 0x3: // or
-    result = alu_inp1 | alu_inp2;
-    break;
-
-  
-  // idk if legal, consult
-  case 0x4: // mul
-    result = alu_inp1 * alu_inp2;
-    break;
-
-  case 0x5: // div
-    if (alu_inp2 == 0)
-    {
-      result = 0xBADCAFFE; // error code
-    }
-    else
-    {
-      result = alu_inp1 / alu_inp2;
-    }
-    break;
-
-  case 0x6: // xor
-    result = alu_inp1 ^ alu_inp2;
-    break;
-  
-
-  case 0x7: // <<
-    result = alu_inp1 << alu_inp2;
-    break;
-
-
-  case 0x8: // >>
-    result = alu_inp1 >> alu_inp2;
-    break;
-
-
-  case 0x9: // ?
-    result = (alu_inp1 < alu_inp2)? 1 : 0;
-    break;
-
-
-  case 0xA: // %
-    if (alu_inp2 == 0)
-    {
-      result = 0xBADCAFFE; // error code
-    }
-    else
-    {
-      result = alu_inp1 % alu_inp2;
-    }
-    break;
-
-
-  
-  default:
-    result = 0xBADCAFFE;
-    break;
+  switch (alu_control) {
+    case 0x0: // add
+      result = alu_inp1 + alu_inp2;
+      break;
+    case 0x1: // sub
+      result = alu_inp1 - alu_inp2;
+      break;
+    case 0x2: // and
+      result = alu_inp1 & alu_inp2;
+      break;
+    case 0x3: // or
+      result = alu_inp1 | alu_inp2;
+      break;
+    // idk if legal, consult -> yes instead use shifting to change (its a 32 binary number)
+    case 0x4: // mul
+      result = alu_inp1 * alu_inp2;
+      break;
+    case 0x5: // div
+      if (alu_inp2 == 0) {
+        result = 0xBADCAFFE; // error code
+      }
+      else {
+        result = alu_inp1 / alu_inp2;
+      }
+      break;
+    case 0x6: // xor
+      result = alu_inp1 ^ alu_inp2;
+      break;
+    case 0x7: // <<
+      result = alu_inp1 << alu_inp2;
+      break;
+    case 0x8: // >>
+      result = alu_inp1 >> alu_inp2;
+      break;
+    case 0x9: // ?
+      result = (alu_inp1 < alu_inp2) ? 1 : 0;
+      break;
+    case 0xA: // %
+      if (alu_inp2 == 0) {
+        result = 0xBADCAFFE; // error code
+      }
+      else {
+        result = alu_inp1 % alu_inp2;
+      }
+      break;
+    default:
+      result = 0xBADCAFFE;
+      break;
   };
   return result;
 }
@@ -289,9 +266,6 @@ uint32_t gen_imm(Instruction instruction) {
     break;
   case 0x37: // U-type
     imm_val = instruction.ujtype.imm;
-  /**
-   * YOUR CODE HERE
-   */
   default: // R and undefined opcode
     break;
   };
@@ -307,48 +281,33 @@ uint32_t gen_imm(Instruction instruction) {
 idex_reg_t gen_control(Instruction instruction) {
   idex_reg_t idex_reg = {0};
   // get the opcode instruction, determine what the register idex_reg needs to hold
-  switch (instruction.opcode)
-  {
-  case 0x33: // R-type
-    /**
-     * YOUR CODE HERE
-     */
-    idex_reg.read_rs1 = instruction.rtype.rs1;
-    idex_reg.read_rs2 = instruction.rtype.rs2;
-
-
-    // Lex thing, idk where to put it
-    idex_reg.read_funct3 = instruction.rtype.funct3;
-    idex_reg.read_funct7 = instruction.rtype.funct7;
-    idex_reg.read_opcode = instruction.opcode;
-    break;
-  case 0x23: // S-type
-    idex_reg.read_rs1 = instruction.stype.rs1;
-    idex_reg.read_rs2 = instruction.stype.rs2;
-
-
-    // Lex
-    idex_reg.read_funct3 = instruction.stype.funct3;
-    idex_reg.read_opcode = instruction.opcode;
-
-    break;
-  case 0x13: // I-type
-    idex_reg.read_rs1 = instruction.itype.rs1;
-
-    // Lex
-    idex_reg.read_funct3 = instruction.itype.funct3;
-    idex_reg.read_opcode = instruction.itype.opcode;
-    break;
-  case 0x63: // B-type
-    idex_reg.read_rs1 = instruction.sbtype.rs1;
-    idex_reg.read_rs2 = instruction.sbtype.rs2;
-
-    // Lex
-    idex_reg.read_funct3 = instruction.sbtype.funct3;
-    idex_reg.read_opcode = instruction.sbtype.opcode;
-    break;
-  default: // Remaining opcodes
-    break;
+  switch (instruction.opcode) {
+    case 0x33: // R-type
+      idex_reg.read_rs1 = instruction.rtype.rs1;
+      idex_reg.read_rs2 = instruction.rtype.rs2;
+      idex_reg.read_funct3 = instruction.rtype.funct3; // yes these are correct!
+      idex_reg.read_funct7 = instruction.rtype.funct7;
+      idex_reg.read_opcode = instruction.opcode;
+      break;
+    case 0x23: // S-type
+      idex_reg.read_rs1 = instruction.stype.rs1;
+      idex_reg.read_rs2 = instruction.stype.rs2;
+      idex_reg.read_funct3 = instruction.stype.funct3;
+      idex_reg.read_opcode = instruction.opcode;
+      break;
+    case 0x13: // I-type
+      idex_reg.read_rs1 = instruction.itype.rs1;
+      idex_reg.read_funct3 = instruction.itype.funct3;
+      idex_reg.read_opcode = instruction.itype.opcode;
+      break;
+    case 0x63: // B-type
+      idex_reg.read_rs1 = instruction.sbtype.rs1;
+      idex_reg.read_rs2 = instruction.sbtype.rs2;
+      idex_reg.read_funct3 = instruction.sbtype.funct3;
+      idex_reg.read_opcode = instruction.sbtype.opcode;
+      break;
+    default: // Remaining opcodes
+      break;
   }
   return idex_reg;
 }
@@ -363,7 +322,7 @@ idex_reg_t gen_control(Instruction instruction) {
  **/
 bool gen_branch(Instruction instruction, int PC) {
   // if instruction is a branch instruction
-  if (instruction.opcode == 0x0) {
+  if (instruction.opcode == 0x63) {
     switch (instruction.sbtype.funct3) {
       case 0x0:
         if (instruction.sbtype.rs1 == instruction.sbtype.rs2) {
@@ -406,9 +365,6 @@ bool gen_branch(Instruction instruction, int PC) {
     }
     return true;
   }
-  /**
-   * YOUR CODE HERE
-   */
   return false;
 }
 
@@ -419,12 +375,14 @@ bool gen_branch(Instruction instruction, int PC) {
  *           based on the pipeline register values.
  * input  : pipeline_regs_t*, pipeline_wires_t*
  * output : None
+ * Kirstin
  */
 void gen_forward(pipeline_regs_t *pregs_p, pipeline_wires_t *pwires_p)
 {
   /**
    * YOUR CODE HERE
    */
+   
 }
 
 /**
@@ -432,6 +390,7 @@ void gen_forward(pipeline_regs_t *pregs_p, pipeline_wires_t *pwires_p)
  *           based on the pipeline register values.
  * input  : pipeline_regs_t*, pipeline_wires_t*
  * output : None
+ * Lex
  */
 void detect_hazard(pipeline_regs_t *pregs_p, pipeline_wires_t *pwires_p, regfile_t *regfile_p)
 {
