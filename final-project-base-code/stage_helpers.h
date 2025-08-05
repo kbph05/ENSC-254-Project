@@ -1,4 +1,4 @@
-#ifndef __STAGE_HELPERS_H__
+.,#ifndef __STAGE_HELPERS_H__
 #define __STAGE_HELPERS_H__
 
 #include <stdio.h>
@@ -15,9 +15,174 @@
 uint32_t gen_alu_control(idex_reg_t idex_reg)
 {
   uint32_t alu_control = 0;
-  /**
-   * YOUR CODE HERE
-   */
+  // Lex
+  switch (idex_reg.read_opcode)
+  case 0x33: // R-type
+    switch (idex_reg.read_funct3)
+    case 0x0:
+      switch (idex_reg.read_funct7)
+      case 0x00:
+        alu_control = 0x0; // add
+        break;
+      case 0x20:
+        alu_control = 0x1; // sub
+        break;
+      case 0x01:
+        alu_control = 0x4; // mul
+        break;
+
+    case 0x1:
+      switch (idex_reg.read_funct7) 
+      case 0x00:
+        alu_control = 0x07;
+        break;
+      case 0x01:
+        alu_control = 0x04; // mulh, S * U
+        break;
+      default:
+        default: // undefined
+        alu_control = 0xBADCAFFE;
+        break;
+  
+    case 0x2:
+      switch (idex_reg.read_funct7)
+      case 0x0: // sltu
+        alu_control = 0x9;
+        break;
+      case 0x01: // multiply unsigned
+        alu_control = 0x4;
+        idex_reg.read_rs2 = (unsigned)idex_reg.read_rs2; //Maybe this? ask
+        break;
+      default:
+        alu_control = 0XBACAFFE;
+        break;
+      
+    case 0x3:
+      switch (idex_reg.read_funct7)
+      case 0x0: // unsigned slt
+        alu_control = 0x9;
+        break;
+      case 0x1: //Multiply high unsigned
+        alu_control = 0x01;
+        break;
+      default:
+        alu_control = 0XBADCAFFE;
+        break;
+    
+    case 0x4:
+      switch (idex_reg.read_funct7)
+      case 0x01: //div
+        alu_control = 0x5;
+        break;
+      case 0x00:
+        alu_control = 0x6;
+        break;
+      default:
+        alu_control = 0XBADCAFFE;
+        break;
+
+
+    
+    case 0x5:
+      switch (idex_reg.read_funct7)
+      case 0x0:
+      case 0x20: //msb required
+        alu_control = 0x8;
+        break;
+      case  0x01: //div unsigned
+        alu_control = 0x5;
+        break;
+      default:
+        alu_control = 0XBADCAFFE;
+        break;
+      
+    
+    case 0x6:
+      switch (idex_reg.read_funct7)
+      case 0x0: //or
+        alu_control = 0x3;
+        break;
+      case 0x01: // rem
+        alu_control = 0xA;
+        break;
+      default:
+        alu_control = 0XBADCAFFE;
+        break;
+      
+
+    case 0x7:
+      switch(idex_reg.read_funct7)
+      case 0x00:
+        alu_control = 0x2;
+        break;
+      case 0x01: //unsigned rem
+        alu_control = 0xA;
+        break;
+      default:
+        alu_control = 0XBADCAFFE;
+        break;
+
+    default: // undefined
+        alu_control = 0xBADCAFFE;
+        break;
+    default: // undefined
+      alu_control = 0xBADCAFFE;
+      break;
+
+  case 0x13: // I type
+    switch (idex_reg.read_funct3)
+    case 0x0: // add
+      alu_control = 0x0;
+      break;
+    case 0x4: //xor
+      alu_control = 0x6;
+      break;
+    case 0x6: // or
+      alu_control = 0x3;
+      break;
+    case 0x7:
+      alu_control = 0x2;
+      break;
+    case 0x1:
+      switch (idex_reg.read_imm[5:11]) //potential error
+        case 0x0:
+        alu_control = 0x7;
+        break;
+      default:
+        alu_control = 0xBADCAFFE;
+        break;
+    case 0x5:
+      switch (idex_reg.read_imm[5:11])
+        case 0x0:
+        case 0x20:
+          alu_control = 0x8;
+          break;
+        default:
+          alu_control = 0xBADCAFFE;
+          break;
+    case 0x2:
+    case 0x3: // (U), zero extend
+      alu_control = 0x9;
+      break;
+    default:
+      alu_control = 0xBADCAFFE;
+      return;
+
+  case 0x3: //I type load
+  case 0x6F: // JAL
+  case 0x67: // JALR
+  case 0x23: // store
+    alu_control = 0x0;
+    break;
+
+  case 0x63: //branch
+    alu_control = 0x1;
+    break;
+  
+  default: // undefined
+    alu_control = 0xBADCAFFE;
+    return;
+
   return alu_control;
 }
 
@@ -33,9 +198,68 @@ uint32_t execute_alu(uint32_t alu_inp1, uint32_t alu_inp2, uint32_t alu_control)
   case 0x0: // add
     result = alu_inp1 + alu_inp2;
     break;
-  /**
-   * YOUR CODE HERE
-   */
+
+  case 0x1: // sub
+    result = alu_inp1 - alu_inp2;
+    break;
+  case 0x2: // and
+    result = alu_inp1 & alu_inp2;
+    break;
+
+  case 0x3: // or
+    result = alu_inp1 | alu_inp2;
+    break;
+
+  
+  // idk if legal, consult
+  case 0x4: // mul
+    result = alu_inp1 * alu_inp2;
+    break;
+
+  case 0x5: // div
+    if (alu_inp2 == 0)
+    {
+      result = 0xBADCAFFE; // error code
+    }
+    else
+    {
+      result = alu_inp1 / alu_inp2;
+    }
+    break;
+
+  case 0x6: // xor
+    result = alu_inp1 ^ alu_inp2;
+    break;
+  
+
+  case 0x7: // <<
+    result = alu_inp1 << alu_inp2;
+    break;
+
+
+  case 0x8: // >>
+    result = alu_inp1 >> alu_inp2;
+    break;
+
+
+  case 0x9: // ?
+    result = (alu_inp1 < alu_inp2)? 1 : 0;
+    break;
+
+
+  case 0xA: // %
+    if (alu_inp2 == 0)
+    {
+      result = 0xBADCAFFE; // error code
+    }
+    else
+    {
+      result = alu_inp1 % alu_inp2;
+    }
+    break;
+
+
+  
   default:
     result = 0xBADCAFFE;
     break;
@@ -97,17 +321,37 @@ idex_reg_t gen_control(Instruction instruction) {
      */
     idex_reg.read_rs1 = instruction.rtype.rs1;
     idex_reg.read_rs2 = instruction.rtype.rs2;
+
+
+    // Lex thing, idk where to put it
+    idex_reg.read_funct3 = instruction.rtype.funct3;
+    idex_reg.read_funct7 = instruction.rtype.funct7;
+    idex_reg.read_opcode = instruction.opcode;
     break;
   case 0x23: // S-type
     idex_reg.read_rs1 = instruction.stype.rs1;
     idex_reg.read_rs2 = instruction.stype.rs2;
+
+
+    // Lex
+    idex_reg.read_funct3 = instruction.stype.funct3;
+    idex_reg.read_opcode = instruction.opcode;
+
     break;
   case 0x13: // I-type
     idex_reg.read_rs1 = instruction.itype.rs1;
+
+    // Lex
+    idex_reg.read_funct3 = instruction.itype.funct3;
+    idex_reg.read_opcode = instruction.itype.opcode;
     break;
   case 0x63: // B-type
     idex_reg.read_rs1 = instruction.sbtype.rs1;
     idex_reg.read_rs2 = instruction.sbtype.rs2;
+
+    // Lex
+    idex_reg.read_funct3 = instruction.sbtype.funct3;
+    idex_reg.read_opcode = instruction.sbtype.opcode;
     break;
   default: // Remaining opcodes
     break;
