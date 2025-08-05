@@ -35,14 +35,14 @@ void bootstrap(pipeline_wires_t* pwires_p, pipeline_regs_t* pregs_p, regfile_t* 
 ifid_reg_t stage_fetch(pipeline_wires_t* pwires_p, regfile_t* regfile_p, Byte* memory_p) {
   ifid_reg_t ifid_reg = {0};
 
-   ifid_reg_t instr_addr = regfile_p->PC //grabs corresponding address
+  ifid_reg.instr_addr = regfile_p->PC; //grabs corresponding address
 
 
-   memory_p = regfile_p->R[instr_addr]; //Take an instruction out of the register given the address by PC
+  memory_p = regfile_p->R[ifid_reg.pc]; //Take an instruction out of the register given the address by PC
 
 
   unsigned long long instruction_bits = 0;
-  instruction_bits = memory_p + instr.addr; //Adds the address and instruction to the instruction_bits to be carried over
+  instruction_bits = memory_p + ifid_reg.instr_addr; //Adds the address and instruction to the instruction_bits to be carried over
 
   #ifdef DEBUG_CYCLE
   printf("[IF ]: Instruction [%08x]@[%08x]: ", instruction_bits, regfile_p->PC);
@@ -58,11 +58,9 @@ ifid_reg_t stage_fetch(pipeline_wires_t* pwires_p, regfile_t* regfile_p, Byte* m
  **/ 
 // Kirstin
 idex_reg_t stage_decode(ifid_reg_t ifid_reg, pipeline_wires_t* pwires_p, regfile_t* regfile_p) {
-  idex_reg_t idex_reg = {0};
 
-  idex_reg.read_rs1 = regfile_p->R[ifid_reg.write_rs1]; // read rs1 by getting the write_rs1 value from the fetch stage
-  idex_reg.read_rs2 = regfile_p->R[ifid_reg.write_rs2]; // read rs2 by getting the write_rs2 value from the fetch stage
-  idex_reg.read_imm = ifid_reg.write_imm; // read imm by getting the write_imm value from the fetch stage
+  idex_reg_t idex_reg = gen_control(ifid_reg.instr);
+  idex_reg.read_imm = gen_imm(ifid_reg.instr); // read imm by getting the write_imm value from the fetch stage
   idex_reg.pc = ifid_reg.pc; // set PC to PC from fetch stage
 
   return idex_reg;
@@ -73,8 +71,7 @@ idex_reg_t stage_decode(ifid_reg_t ifid_reg, pipeline_wires_t* pwires_p, regfile
  * output : exmem_reg_t
  **/
 // Lex
-exmem_reg_t stage_execute(idex_reg_t idex_reg, pipeline_wires_t* pwires_p)
-{
+exmem_reg_t stage_execute(idex_reg_t idex_reg, pipeline_wires_t* pwires_p) {
   exmem_reg_t exmem_reg = {0};
   exmem_reg = execute_instruction(instruction_bits, idex_reg, pwires_p); //I think I just need to input whatever input we are doing? I hope, idk
   return exmem_reg;
@@ -87,9 +84,10 @@ exmem_reg_t stage_execute(idex_reg_t idex_reg, pipeline_wires_t* pwires_p)
 // Kirstin
 memwb_reg_t stage_mem(exmem_reg_t exmem_reg, pipeline_wires_t* pwires_p, Byte* memory_p, Cache* cache_p) {
   memwb_reg_t memwb_reg = {0};
-  
+
   memwb_reg.alu_result = exmem_reg.write_addr; // read the result from alu (write_addr) and write it to alu_result
   Alignment alignment;
+  
   switch (exmem_reg.instr.itype.funct3) {
     case 0x0:
       alignment = LENGTH_BYTE;
@@ -104,7 +102,8 @@ memwb_reg_t stage_mem(exmem_reg_t exmem_reg, pipeline_wires_t* pwires_p, Byte* m
       break; 
   }
 
-  memwb_reg.mem_read = load(memory_p, exmem_reg.instr_addr, ); // read the result from memory and write it to mem_read (ehh i dont like these names you can change them)
+  pwires_p->branch = gen_branch(exmem_reg.instr, exmem_reg.pc); // set branch value in pipeline wires
+  memwb_reg.mem_read = load(memory_p, exmem_reg.instr_addr, alignment); // read the result from memory and write it to mem_read
 
   return memwb_reg;
 }
@@ -115,12 +114,12 @@ memwb_reg_t stage_mem(exmem_reg_t exmem_reg, pipeline_wires_t* pwires_p, Byte* m
  **/ 
 // Kirstin
 void stage_writeback(memwb_reg_t memwb_reg, pipeline_wires_t* pwires_p, regfile_t* regfile_p) {
-  
-  if (mux == 1)
-    regfile_p->R[instr_addr] = memwb_reg.alu_result;
-  else
-    regfile_p->R[instr_addr] = memwb_reg.mem_read;
-
+  if(pwires_p->mem_to_reg == 1) {
+    regfile_p->R[/*blah blah blah*/0] = memwb_reg.mem_read;
+  }
+  else {
+    regfile_p->R[/*blah blah blah*/0] = memwb_reg.alu_result;
+  }
 }
 
 ///////////////////////////////////////////////////////////////////////////////

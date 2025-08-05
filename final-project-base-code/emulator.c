@@ -13,7 +13,7 @@ void execute_store(Instruction, Processor *, Byte *);
 void execute_ecall(Processor *, Byte *);
 void execute_lui(Instruction, Processor *);
 
-void execute_instruction(uint32_t instruction_bits, Processor *processor,Byte *memory) {    
+void execute_instruction(uint32_t instruction_bits, Processor *processor, Byte *memory) {    
     Instruction instruction = parse_instruction(instruction_bits);
     switch(instruction.opcode) {
         case 0x33:

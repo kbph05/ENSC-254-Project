@@ -31,6 +31,12 @@ typedef struct
    * Add other fields here
    // Lex
    */
+  // temp placeholders:(ehh i dont like these names you can change them)
+  unsigned int write_rs1;
+  unsigned int write_rs2;
+  int write_imm;
+  int pc;
+
 }ifid_reg_t;
 
 // Kirstin
@@ -54,6 +60,9 @@ typedef struct
    * Add other fields here
    // Lex
    */
+  // temp placeholders: 
+  unsigned int write_addr;
+  int pc;
 }exmem_reg_t;
 
 // Kirstin
@@ -63,6 +72,7 @@ typedef struct
   uint32_t     instr_addr;
   unsigned int alu_result;
   unsigned int mem_read;
+  int pc;
 
 }memwb_reg_t;
 
@@ -116,6 +126,14 @@ typedef struct
    * Add other fields here
   // Lex
    */
+  // place holders:
+  unsigned int alu_op;
+  bool mem_to_reg;
+  uint32_t reg_write;
+  bool alu_src;
+  bool mem_read;
+  bool branch;
+
 }pipeline_wires_t;
 
 
