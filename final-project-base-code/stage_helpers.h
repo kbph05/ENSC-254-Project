@@ -26,8 +26,7 @@ uint32_t gen_alu_control(idex_reg_t idex_reg)
  * output : uint32_t alu_result
  * Lex
  **/
-uint32_t execute_alu(uint32_t alu_inp1, uint32_t alu_inp2, uint32_t alu_control)
-{
+uint32_t execute_alu(uint32_t alu_inp1, uint32_t alu_inp2, uint32_t alu_control) {
   uint32_t result;
   switch (alu_control)
   {
@@ -61,16 +60,16 @@ uint32_t gen_imm(Instruction instruction) {
   case 0x63: // B-type
     imm_val = get_branch_offset(instruction);
     break;
-  case 0x0: // I-type
+  case 0x13: // I-type
     imm_val = instruction.itype.imm;
     break;
-  case 0x1: // S-type
+  case 0x23: // S-type
     imm_val = get_store_offset(instruction);
     break;
-  case 0x2: // J-type
+  case 0x6F: // J-type
     imm_val = get_jump_offset(instruction);
     break;
-  case 0x3: // U-type
+  case 0x37: // U-type
     imm_val = instruction.ujtype.imm;
   /**
    * YOUR CODE HERE
@@ -99,14 +98,14 @@ idex_reg_t gen_control(Instruction instruction) {
     idex_reg.read_rs1 = instruction.rtype.rs1;
     idex_reg.read_rs2 = instruction.rtype.rs2;
     break;
-  case 0x2: // S-type
+  case 0x23: // S-type
     idex_reg.read_rs1 = instruction.stype.rs1;
     idex_reg.read_rs2 = instruction.stype.rs2;
     break;
-  case 0x3: // I-type
+  case 0x13: // I-type
     idex_reg.read_rs1 = instruction.itype.rs1;
     break;
-  case 0x4: // B-type
+  case 0x63: // B-type
     idex_reg.read_rs1 = instruction.sbtype.rs1;
     idex_reg.read_rs2 = instruction.sbtype.rs2;
     break;
@@ -126,47 +125,40 @@ idex_reg_t gen_control(Instruction instruction) {
  **/
 bool gen_branch(Instruction instruction, int PC) {
   // if instruction is a branch instruction
-  if (instruction.opcode == 0x0)
-  {
+  if (instruction.opcode == 0x0) {
     switch (instruction.sbtype.funct3) {
       case 0x0:
-        if (instruction.sbtype.rs1 == instruction.sbtype.rs2)
-        {
+        if (instruction.sbtype.rs1 == instruction.sbtype.rs2) {
           // increment pc by instruction.sbtype.imm branch offset
           PC += get_branch_offset(instruction);
         }
         break;
       case 0x1:
-        if (instruction.sbtype.rs1 != instruction.sbtype.rs2)
-        {
+        if (instruction.sbtype.rs1 != instruction.sbtype.rs2) {
           // increment pc by instruction.sbtype.imm branch offset
           PC += get_branch_offset(instruction);
         }
         break;
       case 0x4:
-        if (instruction.sbtype.rs1 < instruction.sbtype.rs2)
-        {
+        if (instruction.sbtype.rs1 < instruction.sbtype.rs2) {
           // increment pc by instruction.sbtype.imm branch offset
           PC += get_branch_offset(instruction);
         }
         break;
       case 0x5:
-        if (instruction.sbtype.rs1 >= instruction.sbtype.rs2)
-        {
+        if (instruction.sbtype.rs1 >= instruction.sbtype.rs2) {
           // increment pc by instruction.sbtype.imm branch offset
           PC += get_branch_offset(instruction);
         }
         break;
       case 0x6:
-        if (instruction.sbtype.rs1 < instruction.sbtype.rs2)
-        {
+        if (instruction.sbtype.rs1 < instruction.sbtype.rs2) {
           // increment pc by instruction.sbtype.imm branch offset (zero extends)
           PC += sign_extend_number(get_branch_offset(instruction), 32);
         }
         break;
       case 0x7:
-        if (instruction.sbtype.rs1 >= instruction.sbtype.rs2)
-        {
+        if (instruction.sbtype.rs1 >= instruction.sbtype.rs2) {
           // increment pc by instruction.sbtype.imm branch offset (zero extends)
           PC += sign_extend_number(get_branch_offset(instruction), 32);
         }

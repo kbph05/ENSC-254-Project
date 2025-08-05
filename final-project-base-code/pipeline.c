@@ -73,7 +73,8 @@ idex_reg_t stage_decode(ifid_reg_t ifid_reg, pipeline_wires_t* pwires_p, regfile
 // Lex
 exmem_reg_t stage_execute(idex_reg_t idex_reg, pipeline_wires_t* pwires_p) {
   exmem_reg_t exmem_reg = {0};
-  exmem_reg = execute_instruction(instruction_bits, idex_reg, pwires_p); //I think I just need to input whatever input we are doing? I hope, idk
+  exmem_reg.write_addr = 
+  execute_instruction(instruction_bits, idex_reg, pwires_p); //I think I just need to input whatever input we are doing? I hope, idk
   return exmem_reg;
 }
 
