@@ -36,11 +36,7 @@ ifid_reg_t stage_fetch(pipeline_wires_t* pwires_p, regfile_t* regfile_p, Byte* m
   ifid_reg_t ifid_reg = {0};
 
   ifid_reg.instr_addr = regfile_p->PC; //grabs corresponding address
-
-
   memory_p = regfile_p->R[ifid_reg.pc]; //Take an instruction out of the register given the address by PC
-
-
   unsigned long long instruction_bits = 0;
   instruction_bits = memory_p + ifid_reg.instr_addr; //Adds the address and instruction to the instruction_bits to be carried over
 
@@ -59,11 +55,10 @@ ifid_reg_t stage_fetch(pipeline_wires_t* pwires_p, regfile_t* regfile_p, Byte* m
 // Kirstin
 idex_reg_t stage_decode(ifid_reg_t ifid_reg, pipeline_wires_t* pwires_p, regfile_t* regfile_p) {
 
-  idex_reg_t idex_reg = gen_control(ifid_reg.instr);
+  idex_reg_t idex_reg = gen_control(ifid_reg.instr); // set control values
   idex_reg.read_imm = gen_imm(ifid_reg.instr); // read imm by getting the write_imm value from the fetch stage
   idex_reg.pc = ifid_reg.pc; // set PC to PC from fetch stage
-
-
+  
   return idex_reg;
 }
 
@@ -136,10 +131,10 @@ memwb_reg_t stage_mem(exmem_reg_t exmem_reg, pipeline_wires_t* pwires_p, Byte* m
 // Kirstin
 void stage_writeback(memwb_reg_t memwb_reg, pipeline_wires_t* pwires_p, regfile_t* regfile_p) {
   if(pwires_p->mem_to_reg == 1) {
-    regfile_p->R[/*blah blah blah*/0] = memwb_reg.mem_read;
+    regfile_p->R[pwires_p->PC] = memwb_reg.mem_read;
   }
   else {
-    regfile_p->R[/*blah blah blah*/0] = memwb_reg.alu_result;
+    regfile_p->R[pwires_p->PC] = memwb_reg.alu_result;
   }
 }
 

@@ -35,9 +35,6 @@ typedef struct
   unsigned int write_rs1;
   unsigned int write_rs2;
   int write_imm;
-
-
-
   int pc;
 
 }ifid_reg_t;
@@ -47,16 +44,13 @@ typedef struct
 {
   Instruction  instr;
   uint32_t     instr_addr;
-
+  
   unsigned int read_rs1;
   unsigned int read_rs2;
-  int read_imm;
-  int pc;
-
-  // Lex
-  unsigned int read_funct3;
   unsigned int read_funct7;
   unsigned int read_opcode;
+  int read_imm;
+  int pc;
 }idex_reg_t;
 
 typedef struct
