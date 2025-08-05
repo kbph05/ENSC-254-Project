@@ -136,7 +136,7 @@ uint32_t gen_alu_control(idex_reg_t idex_reg) {
           alu_control = 0x2;
           break;
         case 0x1:
-          switch (idex_reg.read_imm[5:11]) { //potential error
+          switch (idex_reg.read_imm) { //potential error
             case 0x0:
               alu_control = 0x7;
               break;
@@ -145,7 +145,7 @@ uint32_t gen_alu_control(idex_reg_t idex_reg) {
               break;
           }
         case 0x5:
-          switch (idex_reg.read_imm[5:11]) {
+          switch (idex_reg.read_imm) {
             case 0x0:
               break;
             case 0x20:
@@ -161,7 +161,7 @@ uint32_t gen_alu_control(idex_reg_t idex_reg) {
           break;
         default:
           alu_control = 0xBADCAFFE;
-          return;
+          break;
       }
   // case 0x3: //I type load
   // case 0x6F: // JAL
@@ -174,7 +174,7 @@ uint32_t gen_alu_control(idex_reg_t idex_reg) {
       break;
     default: // undefined
       alu_control = 0xBADCAFFE;
-      return;
+      break;
   }
   return alu_control;
 }
@@ -246,10 +246,8 @@ uint32_t execute_alu(uint32_t alu_inp1, uint32_t alu_inp2, uint32_t alu_control)
  * Kirstin
  **/
 uint32_t gen_imm(Instruction instruction) {
+
   int imm_val = 0;
-  /**
-   * YOUR CODE HERE
-   */
   // get the imm values for instructions with imms
   switch (instruction.opcode) {
   case 0x63: // B-type
@@ -279,6 +277,7 @@ uint32_t gen_imm(Instruction instruction) {
  * Kirstin
  **/
 idex_reg_t gen_control(Instruction instruction) {
+
   idex_reg_t idex_reg = {0};
   // get the opcode instruction, determine what the register idex_reg needs to hold
   switch (instruction.opcode) {
@@ -382,7 +381,8 @@ void gen_forward(pipeline_regs_t *pregs_p, pipeline_wires_t *pwires_p)
   /**
    * YOUR CODE HERE
    */
-   
+  // connect pwires from one stage to another stage
+
 }
 
 /**

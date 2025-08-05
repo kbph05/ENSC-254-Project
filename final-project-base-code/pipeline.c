@@ -84,7 +84,7 @@ exmem_reg_t stage_execute(idex_reg_t idex_reg, pipeline_wires_t* pwires_p) {
       exmem_reg.write_addr = execute_alu(idex_reg.read_rs1, idex_reg.read_imm, control_thing);
       break;
     case 0x63:
-      exmem_reg.instr = execute_alu(idex_reg.read_rs1, idex_reg.read_rs2, control_thing); // may need to implement the logic for branch
+      exmem_reg.write_addr = execute_alu(idex_reg.read_rs1, idex_reg.read_rs2, control_thing); // may need to implement the logic for branch
       break;
     default:
       return; // idk what to do here
@@ -131,10 +131,10 @@ memwb_reg_t stage_mem(exmem_reg_t exmem_reg, pipeline_wires_t* pwires_p, Byte* m
 // Kirstin
 void stage_writeback(memwb_reg_t memwb_reg, pipeline_wires_t* pwires_p, regfile_t* regfile_p) {
   if(pwires_p->mem_to_reg == 1) {
-    regfile_p->R[pwires_p->PC] = memwb_reg.mem_read;
+    regfile_p->R[pwires_p->pcsrc] = memwb_reg.mem_read;
   }
   else {
-    regfile_p->R[pwires_p->PC] = memwb_reg.alu_result;
+    regfile_p->R[pwires_p->pcsrc] = memwb_reg.alu_result;
   }
 }
 

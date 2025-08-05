@@ -48,6 +48,7 @@ typedef struct
   unsigned int read_rs1;
   unsigned int read_rs2;
   unsigned int read_funct7;
+  unsigned int read_funct3;
   unsigned int read_opcode;
   int read_imm;
   int pc;
@@ -62,8 +63,7 @@ typedef struct
    * Add other fields here
    // Lex
    */
-  // temp placeholders: 
-  unsigned int write_addr;
+  uint32_t write_addr;
   int pc;
 }exmem_reg_t;
 
