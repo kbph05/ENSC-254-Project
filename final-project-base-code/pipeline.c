@@ -63,6 +63,7 @@ idex_reg_t stage_decode(ifid_reg_t ifid_reg, pipeline_wires_t* pwires_p, regfile
   idex_reg.read_imm = gen_imm(ifid_reg.instr); // read imm by getting the write_imm value from the fetch stage
   idex_reg.pc = ifid_reg.pc; // set PC to PC from fetch stage
 
+
   return idex_reg;
 }
 
@@ -73,7 +74,25 @@ idex_reg_t stage_decode(ifid_reg_t ifid_reg, pipeline_wires_t* pwires_p, regfile
 // Lex
 exmem_reg_t stage_execute(idex_reg_t idex_reg, pipeline_wires_t* pwires_p) {
   exmem_reg_t exmem_reg = {0};
-  exmem_reg = execute_instruction(instruction_bits, idex_reg, pwires_p); //I think I just need to input whatever input we are doing? I hope, idk
+  control_thing = gen_alu_control(idex_reg);
+  switch (idex_reg.read_opcode)
+    case 0x33:
+      exmem_reg.result = execute_alu(idex_reg.read_rs1, idex_reg.read_rs2, control_thing);
+      break;
+    case 0x13:
+      exmem_reg.result = execute_alu(idex_reg.read_rs1, idex_reg.read_imm, control_thing); // Might need a system to isolate just imm[0:4]
+      break;
+    case 0x03: // meant to write to write_addr for load
+    case 0x23: //meant to write to write_addr for store
+    case 0x6F: // meant to write to write_addr for JAL
+    case 0x67: // meant to write to write_addr for JALR
+      exmem_reg.write_addr = execute_alu(idex_reg.read_rs1, idex_reg.read_imm, control_thing);
+      break;
+    case 0x63:
+      exmem_reg.instr = execute_alu(idex_reg.read_rs1, idex_reg.read_rs2, control_thing); // may need to implement the logic for branch
+      break;
+    default:
+      return; // idk what to do here
   return exmem_reg;
 }
 

@@ -35,6 +35,9 @@ typedef struct
   unsigned int write_rs1;
   unsigned int write_rs2;
   int write_imm;
+
+
+
   int pc;
 
 }ifid_reg_t;
@@ -50,12 +53,17 @@ typedef struct
   int read_imm;
   int pc;
 
+  // Lex
+  unsigned int read_funct3;
+  unsigned int read_funct7;
+  unsigned int read_opcode;
 }idex_reg_t;
 
 typedef struct
 {
   Instruction instr;
   uint32_t    instr_addr;
+  unsigned int result; //to store the computation results
   /**
    * Add other fields here
    // Lex
