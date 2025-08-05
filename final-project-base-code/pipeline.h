@@ -135,6 +135,7 @@ typedef struct
   bool alu_src;
   bool mem_read;
   bool branch;
+  bool stall;
 
 }pipeline_wires_t;
 
