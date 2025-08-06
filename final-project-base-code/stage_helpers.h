@@ -199,7 +199,7 @@ uint32_t execute_alu(uint32_t alu_inp1, uint32_t alu_inp2, uint32_t alu_control)
     case 0x3: // or
       result = alu_inp1 | alu_inp2;
       break;
-    // idk if legal, consult -> yes instead use shifting to change (its a 32 binary number)
+    // idk if legal, consult
     case 0x4: // mul
       result = alu_inp1 * alu_inp2;
       break;

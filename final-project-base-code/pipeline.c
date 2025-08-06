@@ -34,17 +34,15 @@ void bootstrap(pipeline_wires_t* pwires_p, pipeline_regs_t* pregs_p, regfile_t* 
 // Lex
 ifid_reg_t stage_fetch(pipeline_wires_t* pwires_p, regfile_t* regfile_p, Byte* memory_p) {
   ifid_reg_t ifid_reg = {0};
-
+  uint32_t instruction_bits;
   // ifid_reg.instr_addr = regfile_p->PC; //grabs corresponding address
 
-
   // memory_p = regfile_p->R[ifid_reg.pc]; //Take an instruction out of the register given the address by PC
-
 
   // unsigned long long instruction_bits = 0;
   // instruction_bits = memory_p + ifid_reg.instr_addr; //Adds the address and instruction to the instruction_bits to be carried over
 
-  if (regfile_p->PC < MEMORY_SPACE -3) {
+  if (regfile_p->PC < MEMORY_SPACE - 3) { // Store into memory???? Not the right stage....why checking if PC is less than memory space?
     instruction_bits = (memory_p[regfile_p->PC + 3] << 24) |
                       (memory_p[regfile_p->PC + 2] << 16) |
                       (memory_p[regfile_p->PC + 1] << 8) |
@@ -54,11 +52,11 @@ ifid_reg_t stage_fetch(pipeline_wires_t* pwires_p, regfile_t* regfile_p, Byte* m
   if (instruction_bits == 0) {
     instruction_bits = 0x00000013; // NOP instruction
   }
-  regfile_p.instr = parse_instruction(instruction_bits); // parse the instruction bits into an Instruction struct
-  regfile_p.instr_addr = regfile_p->PC; // set the instruction address to the current PC
+  ifid_reg.instr = parse_instruction(instruction_bits); // parse the instruction bits into an Instruction struct
+  ifid_reg.instr_addr = regfile_p->PC; // set the instruction address to the current PC
 
   if (!pwires_p->stall) { //Decode must check if pc stalls
-    PC += 4;
+    regfile_p->PC += 4;
   }
 
   #ifdef DEBUG_CYCLE
@@ -78,7 +76,12 @@ idex_reg_t stage_decode(ifid_reg_t ifid_reg, pipeline_wires_t* pwires_p, regfile
   idex_reg_t idex_reg = gen_control(ifid_reg.instr); // set control values
   idex_reg.read_imm = gen_imm(ifid_reg.instr); // read imm by getting the write_imm value from the fetch stage
   idex_reg.pc = ifid_reg.pc; // set PC to PC from fetch stage
-  
+  //pwires_p->c
+
+  #ifdef DEBUG_CYCLE
+  printf("[ID ]: Instruction [%08x]@[%08x]: ", ifid_reg.instr.bits, idex_reg.pc);
+  decode_instruction(idex_reg.instr.bits);
+  #endif
   return idex_reg;
 }
 
@@ -107,9 +110,14 @@ exmem_reg_t stage_execute(idex_reg_t idex_reg, pipeline_wires_t* pwires_p) {
       exmem_reg.write_addr = execute_alu(idex_reg.read_rs1, idex_reg.read_rs2, control_thing); // may need to implement the logic for branch
       break;
     default:
-      return; // idk what to do here
+      break; // idk what to do here
   }
-    
+
+  #ifdef DEBUG_CYCLE
+  printf("[EX ]: Instruction [%08x]@[%08x]: ", idex_reg.instr.bits, idex_reg.pc);
+  decode_instruction(exmem_reg.instr.bits);
+  #endif
+
   return exmem_reg;
 }
 
@@ -140,6 +148,11 @@ memwb_reg_t stage_mem(exmem_reg_t exmem_reg, pipeline_wires_t* pwires_p, Byte* m
 
   pwires_p->branch = gen_branch(exmem_reg.instr, exmem_reg.pc); // set branch value in pipeline wires
   memwb_reg.mem_read = load(memory_p, exmem_reg.instr_addr, alignment); // read the result from memory and write it to mem_read
+  
+  #ifdef DEBUG_CYCLE
+  printf("[MEM ]: Instruction [%08x]@[%08x]: ", memwb_reg.instr.bits, memwb_reg.pc);
+  decode_instruction(memwb_reg.instr.bits);
+  #endif
 
   return memwb_reg;
 }
@@ -156,6 +169,11 @@ void stage_writeback(memwb_reg_t memwb_reg, pipeline_wires_t* pwires_p, regfile_
   else {
     regfile_p->R[pwires_p->pcsrc] = memwb_reg.alu_result;
   }
+
+  #ifdef DEBUG_CYCLE
+  printf("[WB ]: Instruction [%08x]@[%08x]: ", memwb_reg.instr.bits, memwb_reg.pc);
+  #endif
+  
 }
 
 ///////////////////////////////////////////////////////////////////////////////

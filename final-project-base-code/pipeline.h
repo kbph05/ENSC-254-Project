@@ -50,7 +50,7 @@ typedef struct
   unsigned int read_funct7;
   unsigned int read_funct3;
   unsigned int read_opcode;
-  int read_imm;
+  uint32_t read_imm;
   int pc;
 }idex_reg_t;
 
@@ -128,14 +128,14 @@ typedef struct
    * Add other fields here
   // Lex
    */
-  // place holders:
+
   unsigned int alu_op;
   bool mem_to_reg;
   uint32_t reg_write;
   bool alu_src;
   bool mem_read;
   bool branch;
-  bool stall;
+  bool stall; // (ok lex wrote this one)
 
 }pipeline_wires_t;
 

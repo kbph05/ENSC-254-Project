@@ -186,7 +186,7 @@ int main(int argc, char **argv) {
   pipeline_regs_t pipeline_regs = {0};
   pipeline_wires_t pipeline_wires = {0};
   total_cycle_counter = 0;
-  mem_access_counter = 0;
+  //mem_access_counter = 0; commenting this because its not working
 
   bootstrap(&pipeline_wires, &pipeline_regs, &regfile);
 
