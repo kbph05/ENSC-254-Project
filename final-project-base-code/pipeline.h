@@ -69,20 +69,9 @@ typedef struct
   Instruction instr;
   uint32_t instr_addr;
   uint32_t instr_bits;
-  unsigned int alu_result; //to store the computation results
-  unsigned int write_rd; // to store the address of rd for regfile
-  unsigned int read_rs1;
-  unsigned int read_rs2;
+  unsigned int result; //to store the computation results, would rather put it in write_addr
+  uint32_t write_addr;
   unsigned int pc;
-
-  // next stage:
-  bool mem_read;
-  bool mem_write;
-  bool branch;
-
-  bool mem_to_reg;
-  bool reg_write;
-
 }exmem_reg_t;
 
 // Kirstin
@@ -95,13 +84,6 @@ typedef struct
   unsigned int alu_result;
   unsigned int mem_read; //rename
   unsigned int pc;
-  unsigned int read_rs2;
-  unsigned int write_rd;
-
-  // next stage:
-  bool mem_to_reg;
-  bool reg_write;
-
 }memwb_reg_t;
 
 

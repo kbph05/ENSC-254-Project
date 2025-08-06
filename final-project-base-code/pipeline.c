@@ -141,29 +141,13 @@ exmem_reg_t stage_execute(idex_reg_t idex_reg, pipeline_wires_t* pwires_p) {
   }
 
 
-  // switch (idex_reg.read_opcode) {
-  //   case 0x33:
-  //     exmem_reg.result = execute_alu(idex_reg.read_rs1, idex_reg.read_rs2, control_thing);
-  //     break;
-  //   case 0x13:
-  //     // Might need a system to isolate just imm[0:4]
-  //     break;
-  //   case 0x03: // meant to write to write_addr for load
-  //   case 0x23: //meant to write to write_addr for store
-  //   case 0x6F: // meant to write to write_addr for JAL
-  //   case 0x67: // meant to write to write_addr for JALR
-  //     exmem_reg.write_addr = execute_alu(idex_reg.read_rs1, idex_reg.read_imm, control_thing);
-  //     break;
-  //   case 0x63:
-  //     exmem_reg.write_addr = execute_alu(idex_reg.read_rs1, idex_reg.read_rs2, control_thing); // may need to implement the logic for branch
-  //     break;
-  //   default:
-  //     break; // idk what to do here
-  // }
+
   exmem_reg.pc = idex_reg.pc;
-  // if (extend == true) {
-  //   exmem_reg = sign_extend_number(exmem_reg, size(exmem_reg));
-  // }
+  exmem_reg.mem_read = idex_reg.mem_read;
+  exmem_reg.mem_to_reg = idex_reg.mem_to_reg;
+  exmem_reg.mem_write = idex_reg.mem_write;
+
+  exmem_reg.read_rs2 = idex_reg.read_rs2;
 
   #ifdef DEBUG_CYCLE
   printf("[EX ]: Instruction [%08x]@[%08x]: ", exmem_reg.instr_bits, exmem_reg.pc);
@@ -179,7 +163,7 @@ exmem_reg_t stage_execute(idex_reg_t idex_reg, pipeline_wires_t* pwires_p) {
  **/ 
 // Kirstin
 memwb_reg_t stage_mem(exmem_reg_t exmem_reg, pipeline_wires_t* pwires_p, Byte* memory_p, Cache* cache_p) {
-  memwb_reg_t memwb_reg = {0};
+  memwb_reg_t memwb_reg = {0}; // establishing new memwb_reg
 
   // for the debug cycle
   memwb_reg.instr_bits = exmem_reg.instr_bits;
@@ -195,21 +179,26 @@ memwb_reg_t stage_mem(exmem_reg_t exmem_reg, pipeline_wires_t* pwires_p, Byte* m
   memwb_reg.reg_write = exmem_reg.reg_write;
   memwb_reg.mem_to_reg = exmem_reg.mem_to_reg;
   
+<<<<<<< HEAD
   // get the alignment for word value in memory
   Alignment alignment;
   switch (exmem_reg.instr.itype.funct3) {
+=======
+  switch (exmem_reg.instr.itype.funct3) { //Helps decide if we are taking 0:7, 0:15, 0:31 of rs2
+>>>>>>> eb00f2b (Check Second Wave of Text)
     case 0x0:
-      alignment = LENGTH_BYTE;
+      alignment = LENGTH_BYTE; // 0:7
       break;
     case 0x1:
-      alignment = LENGTH_HALF_WORD;
+      alignment = LENGTH_HALF_WORD; // 0:15
       break;
     case 0x2:
-      alignment = LENGTH_WORD;
+      alignment = LENGTH_WORD; // 0:31
       break;
     default: 
       break; 
   }
+<<<<<<< HEAD
 
   // from the control in execute stage:
   if (exmem_reg.mem_write) {store(memory_p, memwb_reg.read_rs2, alignment, memwb_reg.alu_result);} // store in memory if the control signal is 1
@@ -217,11 +206,30 @@ memwb_reg_t stage_mem(exmem_reg_t exmem_reg, pipeline_wires_t* pwires_p, Byte* m
   if (exmem_reg.branch) {pwires_p->pcsrc = 1;} else {pwires_p->pcsrc = 0;} // when pcsrc = 1 then its a branch otherwise its not a branch 
 
 
+=======
+  
+  pwires_p->branch = gen_branch(exmem_reg.instr, exmem_reg.pc); // set branch value in pipeline wires
+  // Lex Note: idk if that is how branch works, but i could be really stupid.
+
+  // Before performing this, we need to check if the conditions for store are fulfilled. i.e: Mem_write = 1, Mem_read = 0, reg_write = 0
+  if ((exmem_reg.mem_write == 1) && (exmem_reg.mem_read == 0)) { //idk where reg_write went
+    store(memory_p, exmem_reg.result, alignment, exmem_reg.read_rs2);
+  }
+
+  // Before performing this, you need to check the conditions of your MemRead. If = 1, then perform
+  if ((exmem_reg.mem_read == 1) && (exmem_reg.mem_to_reg == 1) && (exmem_reg.mem_write == 0)) {
+    memwb_reg.mem_read = load(memory_p, exmem_reg.result, alignment); // read the result from memory and write it to mem_read
+
+  }
+  
+>>>>>>> eb00f2b (Check Second Wave of Text)
   #ifdef DEBUG_CYCLE
   printf("[MEM ]: Instruction [%08x]@[%08x]: ", memwb_reg.instr_bits, memwb_reg.pc);
   decode_instruction(memwb_reg.instr_bits);
   #endif
 
+
+  // Missing forward to rd and shit and what not
   return memwb_reg;
 }
 
