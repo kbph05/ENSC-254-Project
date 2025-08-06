@@ -109,26 +109,61 @@ exmem_reg_t stage_execute(idex_reg_t idex_reg, pipeline_wires_t* pwires_p) {
   exmem_reg_t exmem_reg = {0};
 
   exmem_reg.instr_bits = idex_reg.instr_bits;
-  uint32_t alu_control_signal; // control signal for the alu unit
-  uint32_t alu_inp2; // second input (could be imm or rs2)
 
-  if (idex_reg.alu_op) {alu_control_signal = gen_alu_control(idex_reg);} // if alu_op is 1 then generate the alu_control signal needed for the operation
-  if (idex_reg.alu_src) {alu_inp2 = idex_reg.read_imm;} else {alu_inp2 = idex_reg.read_rs2;} // determine the value for one of the inputs
 
-  exmem_reg.alu_result = execute_alu(idex_reg.read_rs1, alu_inp2, alu_control_signal); // compute the alu operation
-  exmem_reg.read_rs2 = idex_reg.read_rs2;
-  exmem_reg.read_rs1 = idex_reg.read_rs1;
+  idex_reg.alu_op = gen_alu_control(idex_reg);
+  if (idex_reg.read_opcode == 0x63) {
+    gen_branch
+  }
+  exmem_reg.result = (alu_src) ? execute_alu(idex_reg.read_rs1, idex_reg.read_imm, idex_reg.alu_op) : execute_alu(idex_reg.read_rs1, idex_reg.read_rs2, idex_reg.alu_op);
+  
+  switch (idex_reg.read_opcode) {
+    case 0x33: // Rtype
+      idex_reg.reg_write = 1; // should cascade down
+      // intentional fall through
+    case 0x13: // I type ALU
+    case 0x37: // LUI
+    case 0x6F: // jal
+    case 0x67: //JALR
+      idex_reg.mem_to_reg = 0;
+      break;
+    case 0x03: // I type load
+      idex_reg.mem_to_reg = 1;
+      idex_reg.mem_read = 1;
+      idex_reg.reg_write = 1;
+      break;
+    case 0x23: //S type
+      idex_reg.mem_write = 1;
+      break;
+    default: // idk what to put for error code
+      fprintf(stderr, "Unrecognized Code: 0x%02X\n", idex_reg.read_opcode); // took from internet
+      break;
+  }
 
-  // these are all the control signals needed for next stages of cpu
-  exmem_reg.mem_read = idex_reg.mem_read; // transfer to memory stage
-  exmem_reg.mem_write = idex_reg.mem_write; // transfer to memory stage
-  exmem_reg.mem_to_reg = idex_reg.mem_to_reg; // transfer for WB stage
-  exmem_reg.reg_write = idex_reg.reg_write; // transfer for WB stage
-  exmem_reg.write_rd = idex_reg.write_rd;
 
-  // branch condition
-  exmem_reg.branch = gen_branch(exmem_reg.instr, exmem_reg.read_rs1, exmem_reg.read_rs2); 
-
+  // switch (idex_reg.read_opcode) {
+  //   case 0x33:
+  //     exmem_reg.result = execute_alu(idex_reg.read_rs1, idex_reg.read_rs2, control_thing);
+  //     break;
+  //   case 0x13:
+  //     // Might need a system to isolate just imm[0:4]
+  //     break;
+  //   case 0x03: // meant to write to write_addr for load
+  //   case 0x23: //meant to write to write_addr for store
+  //   case 0x6F: // meant to write to write_addr for JAL
+  //   case 0x67: // meant to write to write_addr for JALR
+  //     exmem_reg.write_addr = execute_alu(idex_reg.read_rs1, idex_reg.read_imm, control_thing);
+  //     break;
+  //   case 0x63:
+  //     exmem_reg.write_addr = execute_alu(idex_reg.read_rs1, idex_reg.read_rs2, control_thing); // may need to implement the logic for branch
+  //     break;
+  //   default:
+  //     break; // idk what to do here
+  // }
+  exmem_reg.pc = idex_reg.pc;
+  // if (extend == true) {
+  //   exmem_reg = sign_extend_number(exmem_reg, size(exmem_reg));
+  // }
 
   #ifdef DEBUG_CYCLE
   printf("[EX ]: Instruction [%08x]@[%08x]: ", exmem_reg.instr_bits, exmem_reg.pc);

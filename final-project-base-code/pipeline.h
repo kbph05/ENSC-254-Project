@@ -53,6 +53,8 @@ typedef struct
   
   // next stage:
   bool alu_op;
+
+  uint8_t alu_op;
   bool alu_src;
 
   bool mem_write;
