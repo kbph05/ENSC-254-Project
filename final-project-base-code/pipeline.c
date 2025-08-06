@@ -136,7 +136,6 @@ exmem_reg_t stage_execute(idex_reg_t idex_reg, pipeline_wires_t* pwires_p) {
       idex_reg.mem_write = 1;
       break;
     default: // idk what to put for error code
-      fprintf(stderr, "Unrecognized Code: 0x%02X\n", idex_reg.read_opcode); // took from internet
       break;
   }
 
@@ -227,7 +226,7 @@ memwb_reg_t stage_mem(exmem_reg_t exmem_reg, pipeline_wires_t* pwires_p, Byte* m
   printf("[MEM ]: Instruction [%08x]@[%08x]: ", memwb_reg.instr_bits, memwb_reg.pc);
   decode_instruction(memwb_reg.instr_bits);
   #endif
-
+  memwb_reg.read_rd
 
   // Missing forward to rd and shit and what not
   return memwb_reg;
