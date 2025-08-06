@@ -49,11 +49,12 @@ typedef struct
   uint32_t read_imm;
   unsigned int pc;
 
-  bool alu_op;
+  uint8_t alu_op;
   bool alu_src;
   bool mem_to_reg;
   bool reg_write;
   bool mem_read;
+  bool mem_write;
 
 }idex_reg_t;
 

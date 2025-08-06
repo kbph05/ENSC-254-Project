@@ -109,15 +109,35 @@ exmem_reg_t stage_execute(idex_reg_t idex_reg, pipeline_wires_t* pwires_p) {
 
   exmem_reg.instr_bits = idex_reg.instr_bits;
 
-  bool extend;
-  int control_thing; 
 
-  (alu_op) ? exmem_reg.result = gen_alu_control(idex_reg);
-  (alu_src) ? exmem_reg.result = execute_alu(idex_reg.read_rs1, idex_reg.read_imm, ) : execute_alu(idex_reg.read_rs1, idex_reg.read_imm,); 
-  (mem_to_reg) ? exmem_reg.
-  (reg_write) ?
-  (mem_read) ?
-
+  idex_reg.alu_op = gen_alu_control(idex_reg);
+  if (idex_reg.read_opcode == 0x63) {
+    gen_branch
+  }
+  exmem_reg.result = (alu_src) ? execute_alu(idex_reg.read_rs1, idex_reg.read_imm, idex_reg.alu_op) : execute_alu(idex_reg.read_rs1, idex_reg.read_rs2, idex_reg.alu_op);
+  
+  switch (idex_reg.read_opcode) {
+    case 0x33: // Rtype
+      idex_reg.reg_write = 1; // should cascade down
+      // intentional fall through
+    case 0x13: // I type ALU
+    case 0x37: // LUI
+    case 0x6F: // jal
+    case 0x67: //JALR
+      idex_reg.mem_to_reg = 0;
+      break;
+    case 0x03: // I type load
+      idex_reg.mem_to_reg = 1;
+      idex_reg.mem_read = 1;
+      idex_reg.reg_write = 1;
+      break;
+    case 0x23: //S type
+      idex_reg.mem_write = 1;
+      break;
+    default: // idk what to put for error code
+      fprintf(stderr, "Unrecognized Code: 0x%02X\n", idex_reg.read_opcode); // took from internet
+      break;
+  }
 
 
   // switch (idex_reg.read_opcode) {

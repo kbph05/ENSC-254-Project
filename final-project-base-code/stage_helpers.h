@@ -23,24 +23,26 @@ uint32_t gen_alu_control(idex_reg_t idex_reg) {
           switch (idex_reg.read_funct7) {
             case 0x00:
               alu_control = 0x0; // add
+              idex_reg.alu_src = 0;
               break;
             case 0x20:
               alu_control = 0x1; // sub
+              idex_reg.alu_src = 0;
               break;
             case 0x01:
-              alu_control = 0x4; // mul
+              alu_control = 0xC; // mul
+              idex_reg.alu_src = 0;
               break;
           }
         case 0x1:
           switch (idex_reg.read_funct7) {
-            case 0x00:
+            case 0x00: // sll
               alu_control = 0x07;
+              idex_reg.alu_src = 0;
               break;
-            case 0x01:
-              alu_control = 0xB; // mulh, S * U
-              idex_reg.read_rs1 = (sWord)idex_reg.read_rs1;
-              idex_reg.read_rs2 = (Word)idex_reg.read_rs2;
-
+            case 0x01: //mulh 
+              alu_control = 0xB; // mulh, S * S
+              idex_reg.alu_src = 0;
               break;
             default:
               //default: // undefined
@@ -49,12 +51,13 @@ uint32_t gen_alu_control(idex_reg_t idex_reg) {
           }
         case 0x2:
           switch (idex_reg.read_funct7) {
-            case 0x0: // sltu
-            alu_control = 0x9;
+            case 0x00: // slt
+            alu_control = 0x11;
+            idex_reg.alu_src = 0;
             break;
-          case 0x01: // mulh unsigned
-            alu_control = 0xB;
-            idex_reg.read_rs2 = (unsigned)idex_reg.read_rs2; //Maybe this? ask
+          case 0x01: // mulsu
+            alu_control = 0xF;
+            idex_reg.alu_src = 0;
             break;
           default:
             alu_control = 0XBACAFFE;
@@ -62,25 +65,28 @@ uint32_t gen_alu_control(idex_reg_t idex_reg) {
         } 
         case 0x3:
           switch (idex_reg.read_funct7) {
-             case 0x0: // unsigned slt
+            case 0x0: // unsigned slt
             alu_control = 0x9;
+            idex_reg.alu_src = 0;
             break;
-          case 0x1: //Multiply high unsigned
-            alu_control = 0xB;
-            idex_reg.read_rs2 = (unsigned)idex_reg.read_rs2;
-            idex_reg.read_rs1 = (unsigned)idex_reg.read_rs1;
+          case 0x1: //mulu
+            alu_control = 0x10;
+            idex_reg.alu_src = 0;
             break;
+
           default:
             alu_control = 0XBADCAFFE;
             break;
           }
         case 0x4:
           switch (idex_reg.read_funct7) {
-            case 0x01: //div
-              alu_control = 0x5;
+            case 0x12: //div
+              alu_control = 0x12;
+              idex_reg.alu_src = 0;
               break;
-            case 0x00:
+            case 0x00: // ^
               alu_control = 0x6;
+              idex_reg.alu_src = 0;
               break;
             default:
               alu_control = 0XBADCAFFE;
@@ -88,14 +94,16 @@ uint32_t gen_alu_control(idex_reg_t idex_reg) {
           }
         case 0x5:
           switch (idex_reg.read_funct7) {
-            case 0x0:
-            case 0x20: //msb required
+            case 0x0: //srl
               alu_control = 0x8;
+              idex_reg.alu_src = 0;
+              break;
+            case 0x20: // sra
+              alu_control = 0xE;
               break;
             case  0x01: //div unsigned
               alu_control = 0x5;
-              idex_reg.read_rs1 = (unsigned)idex_reg.read_rs1;
-              idex_reg.read_rs2 = (unsigned)idex_reg.read_rs2;
+              idex_reg.alu_src = 0;
               break;
             default:
               alu_control = 0XBADCAFFE;
@@ -105,9 +113,11 @@ uint32_t gen_alu_control(idex_reg_t idex_reg) {
           switch (idex_reg.read_funct7) {
             case 0x0: //or
               alu_control = 0x3;
+              idex_reg.alu_src = 0;
               break;
-            case 0x01: // rem
+            case 0x13: // rem
               alu_control = 0xA;
+              idex_reg.alu_src = 0;
               break;
             default:
               alu_control = 0XBADCAFFE;
@@ -117,9 +127,11 @@ uint32_t gen_alu_control(idex_reg_t idex_reg) {
           switch(idex_reg.read_funct7) {
             case 0x00:
               alu_control = 0x2;
+              idex_reg.alu_src = 0;
               break;
             case 0x01: //unsigned rem
               alu_control = 0xA;
+              idex_reg.alu_src = 0;
               break;
             default:
               alu_control = 0XBADCAFFE;
@@ -133,32 +145,40 @@ uint32_t gen_alu_control(idex_reg_t idex_reg) {
       switch (idex_reg.read_funct3) {
         case 0x0: // add
           alu_control = 0x0;
+          idex_reg.alu_src = 1;
           break;
         case 0x4: //xor
           alu_control = 0x6;
+          idex_reg.alu_src = 1;
           break;
         case 0x6: // or
           alu_control = 0x3;
+          idex_reg.alu_src = 1;
           break;
         case 0x7:
           alu_control = 0x2;
+          idex_reg.alu_src = 1;
           break;
         case 0x1:
           switch (idex_reg.read_imm) { //potential error
-            case 0x0:
-              alu_control = 0xC;
+            case 0x0: //sll
+              alu_control = 0x4;
+              idex_reg.alu_src = 1;
               break;
+
             default:
               alu_control = 0xBADCAFFE;
               break;
           }
         case 0x5:
-          switch (idex_reg.read_imm) {
+          switch (idex_reg.read_imm[0::11]) {
             case 0x0:
               alu_control = 0xD;
+              idex_reg.alu_src = 1;
               break;
             case 0x20: //extend
-              alu_control = 0xD;
+              alu_control = 0xE;
+              idex_reg.alu_src = 1;
               break;
             default:
               alu_control = 0xBADCAFFE;
@@ -166,27 +186,27 @@ uint32_t gen_alu_control(idex_reg_t idex_reg) {
           }
         case 0x2:
           alu_control = 0x9;
+          idex_reg.alu_src = 1;
           break;
         case 0x3: // (U), zero extend
           alu_control = 0x9;
-          extend = true;
-          idex_reg.read_rs1 = (unsigned)idex_reg.read_rs1;
+          idex_reg.read_rs1 = sign_extend_number(idex_reg.read_rs1, size(idex_reg.read_rs1));
+          idex_reg.alu_src = 1;
           break;
         default:
           alu_control = 0xBADCAFFE;
           break;
       }
   case 0x3: //I type load
-      // switch (idex_reg.funct3) {
-      //   case 0x0:
-      // }
   case 0x6F: // JAL
   case 0x67: // JALR
-    case 0x23: // store
+  case 0x23: // store
       alu_control = 0x0;
+      idex_reg.alu_src = 1;
       break;
     case 0x63: //branch
       alu_control = 0x1;
+      idex_reg.alu_src = 0;
       break;
     default: // undefined
       alu_control = 0xBADCAFFE;
@@ -215,11 +235,10 @@ uint32_t execute_alu(uint32_t alu_inp1, uint32_t alu_inp2, uint32_t alu_control)
     case 0x3: // or
       result = alu_inp1 | alu_inp2;
       break;
-    // idk if legal, consult
-    case 0x4: // mul
-      result = alu_inp1 * alu_inp2;
+    case 0x4: //sll
+      result = (alu_inp1 << alu_inp2);
       break;
-    case 0x5: // div
+    case 0x5: // divu
       if (alu_inp2 == 0) {
         result = 0xBADCAFFE; // error code
       }
@@ -230,16 +249,16 @@ uint32_t execute_alu(uint32_t alu_inp1, uint32_t alu_inp2, uint32_t alu_control)
     case 0x6: // xor
       result = alu_inp1 ^ alu_inp2;
       break;
-    case 0x7: // <<
+    case 0x7: // sll
       result = alu_inp1 << alu_inp2;
       break;
-    case 0x8: // >>
+    case 0x8: // srl
       result = alu_inp1 >> alu_inp2;
       break;
     case 0x9: // ?
       result = (alu_inp1 < alu_inp2) ? 1 : 0;
       break;
-    case 0xA: // %
+    case 0xA: // remu
       if (alu_inp2 == 0) {
         result = 0xBADCAFFE; // error code
       }
@@ -249,20 +268,52 @@ uint32_t execute_alu(uint32_t alu_inp1, uint32_t alu_inp2, uint32_t alu_control)
       break;
 
     case 0xB: //mulh
-      result = (alu_inp1 * alu_inp2);
-      break;
-
-    case 0xC: //slli
-      result = (alu_inp1 << alu_inp2);
+      result = ((sWord)(sDouble)alu_inp1 * (sWord)(sDouble)alu_inp2) >> 32;
       break;
     
+    case 0xC: // mul
+      result = (sWord)alu_inp1 * (sWord)alu_inp2;
+      break;
     case 0xD: //slri
       result =(alu_inp1 >> alu_inp2);
       break;
+    case 0xE: // sra
+      result = (sWord)alu_inp1 >> (sWord)alu_inp2;
+      break;
+
+    case 0xF: //mulsu
+      result = ((sWord)(sDouble)alu_inp1 * (Word)(Double)alu_inp2) >> 32;
+      break;
+
+    case 0x10:
+      result = ((Word)(Double)alu_inp1 * (Word)(Double)alu_inp2) >> 32;
+      break;
+    
+    case 0x11: // slt
+      result = ((sWord)alu_inp1 < (sWord)alu_inp2) ? 1 : 0;
+      break;
+    case 0x12: // div
+      if (alu_inp2 == 0) {
+        result = 0xBADCAFFE; // error code
+      }
+      else {
+        result = (sWord)alu_inp1 / (sWord)alu_inp2;
+      }
+      break;
+    case 0x13: //rem
+      if (alu_inp2 == 0) {
+        result = 0xBADCAFFE; // error code
+      }
+      else {
+        result = (sWord)alu_inp1 % (sWord)alu_inp2;
+      }
+      break;
+
 
     default:
       result = 0xBADCAFFE;
       break;
+
   };
   return result;
 }
