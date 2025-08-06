@@ -306,31 +306,23 @@ uint32_t gen_imm(Instruction instruction) {
  * Kirstin
  **/
 idex_reg_t gen_control(Instruction instruction) {
-
   idex_reg_t idex_reg = {0};
   // get the opcode instruction, determine what the register idex_reg needs to hold
   switch (instruction.opcode) {
     case 0x33: // R-type
-      idex_reg.read_rs1 = instruction.rtype.rs1;
-      idex_reg.read_rs2 = instruction.rtype.rs2;
-      idex_reg.read_funct3 = instruction.rtype.funct3; // yes these are correct!
+      idex_reg.read_funct3 = instruction.rtype.funct3;
       idex_reg.read_funct7 = instruction.rtype.funct7;
       idex_reg.read_opcode = instruction.opcode;
       break;
     case 0x23: // S-type
-      idex_reg.read_rs1 = instruction.stype.rs1;
-      idex_reg.read_rs2 = instruction.stype.rs2;
       idex_reg.read_funct3 = instruction.stype.funct3;
       idex_reg.read_opcode = instruction.opcode;
       break;
     case 0x13: // I-type
-      idex_reg.read_rs1 = instruction.itype.rs1;
       idex_reg.read_funct3 = instruction.itype.funct3;
       idex_reg.read_opcode = instruction.itype.opcode;
       break;
     case 0x63: // B-type
-      idex_reg.read_rs1 = instruction.sbtype.rs1;
-      idex_reg.read_rs2 = instruction.sbtype.rs2;
       idex_reg.read_funct3 = instruction.sbtype.funct3;
       idex_reg.read_opcode = instruction.sbtype.opcode;
       break;
@@ -423,9 +415,7 @@ void gen_forward(pipeline_regs_t *pregs_p, pipeline_wires_t *pwires_p)
  */
 void detect_hazard(pipeline_regs_t *pregs_p, pipeline_wires_t *pwires_p, regfile_t *regfile_p)
 {
-  /**
-   * YOUR CODE HERE
-   */
+  
 }
 
 ///////////////////////////////////////////////////////////////////////////////

@@ -28,15 +28,10 @@ typedef struct
   Instruction instr;
   uint32_t instr_addr;
   uint32_t instr_bits;
-  /**
-   * Add other fields here
-   // Lex
-   */
-  // temp placeholders:(ehh i dont like these names you can change them)
-  unsigned int write_rs1;
-  unsigned int write_rs2;
-  int write_imm;
-  int pc;
+  unsigned int write_rs1; // write address for rs1
+  unsigned int write_rs2; // write address for rs2
+  unsigned int write_imm;
+  unsigned int pc;
 
 }ifid_reg_t;
 
@@ -44,16 +39,22 @@ typedef struct
 typedef struct
 {
   Instruction  instr;
-  uint32_t     instr_addr;
+  uint32_t instr_addr;
   uint32_t instr_bits;
-  
   unsigned int read_rs1;
   unsigned int read_rs2;
   unsigned int read_funct7;
   unsigned int read_funct3;
   unsigned int read_opcode;
   uint32_t read_imm;
-  int pc;
+  unsigned int pc;
+
+  bool alu_op;
+  bool alu_src;
+  bool mem_to_reg;
+  bool reg_write;
+  bool mem_read;
+
 }idex_reg_t;
 
 typedef struct
@@ -62,12 +63,8 @@ typedef struct
   uint32_t    instr_addr;
   uint32_t instr_bits;
   unsigned int result; //to store the computation results
-  /**
-   * Add other fields here
-   // Lex
-   */
   uint32_t write_addr;
-  int pc;
+  unsigned int pc;
 }exmem_reg_t;
 
 // Kirstin
@@ -78,8 +75,7 @@ typedef struct
   uint32_t instr_addr;
   unsigned int alu_result;
   unsigned int mem_read;
-  int pc;
-
+  unsigned int pc;
 }memwb_reg_t;
 
 
@@ -125,21 +121,11 @@ typedef struct
 
 typedef struct
 {
-  bool      pcsrc;
-  uint32_t  pc_src0;
-  uint32_t  pc_src1;
-  /**
-   * Add other fields here
-  // Lex
-   */
+  bool pcsrc; // manages the multiplexer with PC + 4  (are we branching or just going to next instruction) 
+  uint32_t pc_src0; // adds 4 to PC (for when the next instruction is to be fetched)
+  uint32_t pc_src1; // PC += imm (yes branch or j-type)
 
-  unsigned int alu_op;
-  bool mem_to_reg;
-  uint32_t reg_write;
-  bool alu_src;
-  bool mem_read;
-  bool branch;
-  bool stall; // (ok lex wrote this one)
+  //bool stall;
 
 }pipeline_wires_t;
 
