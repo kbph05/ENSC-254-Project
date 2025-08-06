@@ -14,6 +14,7 @@
  **/
 uint32_t gen_alu_control(idex_reg_t idex_reg) {
   uint32_t alu_control = 0;
+  bool extend = false;
   // Lex
   switch (idex_reg.read_opcode) {
     case 0x33: // R-type
@@ -36,7 +37,10 @@ uint32_t gen_alu_control(idex_reg_t idex_reg) {
               alu_control = 0x07;
               break;
             case 0x01:
-              alu_control = 0x04; // mulh, S * U
+              alu_control = 0xB; // mulh, S * U
+              idex_reg.read_rs1 = (sWord)idex_reg.read_rs1;
+              idex_reg.read_rs2 = (Word)idex_reg.read_rs2;
+
               break;
             default:
               //default: // undefined
@@ -48,8 +52,8 @@ uint32_t gen_alu_control(idex_reg_t idex_reg) {
             case 0x0: // sltu
             alu_control = 0x9;
             break;
-          case 0x01: // multiply unsigned
-            alu_control = 0x4;
+          case 0x01: // mulh unsigned
+            alu_control = 0xB;
             idex_reg.read_rs2 = (unsigned)idex_reg.read_rs2; //Maybe this? ask
             break;
           default:
@@ -62,7 +66,9 @@ uint32_t gen_alu_control(idex_reg_t idex_reg) {
             alu_control = 0x9;
             break;
           case 0x1: //Multiply high unsigned
-            alu_control = 0x01;
+            alu_control = 0xB;
+            idex_reg.read_rs2 = (unsigned)idex_reg.read_rs2;
+            idex_reg.read_rs1 = (unsigned)idex_reg.read_rs1;
             break;
           default:
             alu_control = 0XBADCAFFE;
@@ -88,6 +94,8 @@ uint32_t gen_alu_control(idex_reg_t idex_reg) {
               break;
             case  0x01: //div unsigned
               alu_control = 0x5;
+              idex_reg.read_rs1 = (unsigned)idex_reg.read_rs1;
+              idex_reg.read_rs2 = (unsigned)idex_reg.read_rs2;
               break;
             default:
               alu_control = 0XBADCAFFE;
@@ -136,9 +144,9 @@ uint32_t gen_alu_control(idex_reg_t idex_reg) {
           alu_control = 0x2;
           break;
         case 0x1:
-          switch (idex_reg.read_imm) { //potential error
+          switch (idex_reg.read_imm[5:11]) { //potential error
             case 0x0:
-              alu_control = 0x7;
+              alu_control = 0xC;
               break;
             default:
               alu_control = 0xBADCAFFE;
@@ -147,25 +155,33 @@ uint32_t gen_alu_control(idex_reg_t idex_reg) {
         case 0x5:
           switch (idex_reg.read_imm) {
             case 0x0:
+              alu_control = 0xD;
               break;
-            case 0x20:
-              alu_control = 0x8;
+            case 0x20: //extend
+              alu_control = 0xD;
               break;
             default:
               alu_control = 0xBADCAFFE;
               break;
           }
-      //case 0x2:
+        case 0x2:
+          alu_control = 0x9;
+          break;
         case 0x3: // (U), zero extend
           alu_control = 0x9;
+          extend = true;
+          idex_reg.read_rs1 = (unsigned)idex_reg.read_rs1;
           break;
         default:
           alu_control = 0xBADCAFFE;
           break;
       }
-  // case 0x3: //I type load
-  // case 0x6F: // JAL
-  // case 0x67: // JALR
+  case 0x3: //I type load
+      switch (idex_reg.funct3) {
+        case 0x0
+      }
+  case 0x6F: // JAL
+  case 0x67: // JALR
     case 0x23: // store
       alu_control = 0x0;
       break;
@@ -176,7 +192,7 @@ uint32_t gen_alu_control(idex_reg_t idex_reg) {
       alu_control = 0xBADCAFFE;
       break;
   }
-  return alu_control;
+  return (extend, alu_control);
 }
 
 /**
@@ -231,6 +247,19 @@ uint32_t execute_alu(uint32_t alu_inp1, uint32_t alu_inp2, uint32_t alu_control)
         result = alu_inp1 % alu_inp2;
       }
       break;
+
+    case 0xB: //mulh
+      result = (alu_inp1 * alu_inp2)[63:32];
+      break;
+
+    case 0xC: //slli
+      result = (alu_inp1 << alu_inp2[0:4]);
+      break;
+    
+    case 0xD: //slri
+      result =(alu_inp1 >> alu_inp2[0:4]);
+      break;
+
     default:
       result = 0xBADCAFFE;
       break;

@@ -92,7 +92,9 @@ idex_reg_t stage_decode(ifid_reg_t ifid_reg, pipeline_wires_t* pwires_p, regfile
 // Lex
 exmem_reg_t stage_execute(idex_reg_t idex_reg, pipeline_wires_t* pwires_p) {
   exmem_reg_t exmem_reg = {0};
-  int control_thing = gen_alu_control(idex_reg);
+  bool extend;
+  int control_thing; 
+  (extend, control_thing)= gen_alu_control(idex_reg);
   switch (idex_reg.read_opcode) {
     case 0x33:
       exmem_reg.result = execute_alu(idex_reg.read_rs1, idex_reg.read_rs2, control_thing);
@@ -118,6 +120,9 @@ exmem_reg_t stage_execute(idex_reg_t idex_reg, pipeline_wires_t* pwires_p) {
   decode_instruction(exmem_reg.instr.bits);
   #endif
 
+  if (extend == true) {
+    exmem_reg = sign_extend_number(exmem_reg, size(exmem_reg));
+  }
   return exmem_reg;
 }
 
