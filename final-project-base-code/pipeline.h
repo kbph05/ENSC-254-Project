@@ -26,7 +26,8 @@ extern uint64_t fwd_exmem_counter;
 typedef struct
 {
   Instruction instr;
-  uint32_t    instr_addr;
+  uint32_t instr_addr;
+  uint32_t instr_bits;
   /**
    * Add other fields here
    // Lex
@@ -44,6 +45,7 @@ typedef struct
 {
   Instruction  instr;
   uint32_t     instr_addr;
+  uint32_t instr_bits;
   
   unsigned int read_rs1;
   unsigned int read_rs2;
@@ -58,6 +60,7 @@ typedef struct
 {
   Instruction instr;
   uint32_t    instr_addr;
+  uint32_t instr_bits;
   unsigned int result; //to store the computation results
   /**
    * Add other fields here
@@ -70,8 +73,9 @@ typedef struct
 // Kirstin
 typedef struct
 {
-  Instruction  instr;
-  uint32_t     instr_addr;
+  Instruction instr;
+  uint32_t instr_bits;
+  uint32_t instr_addr;
   unsigned int alu_result;
   unsigned int mem_read;
   int pc;

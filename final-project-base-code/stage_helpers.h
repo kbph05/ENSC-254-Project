@@ -144,7 +144,7 @@ uint32_t gen_alu_control(idex_reg_t idex_reg) {
           alu_control = 0x2;
           break;
         case 0x1:
-          switch (idex_reg.read_imm[5:11]) { //potential error
+          switch (idex_reg.read_imm) { //potential error
             case 0x0:
               alu_control = 0xC;
               break;
@@ -177,9 +177,9 @@ uint32_t gen_alu_control(idex_reg_t idex_reg) {
           break;
       }
   case 0x3: //I type load
-      switch (idex_reg.funct3) {
-        case 0x0
-      }
+      // switch (idex_reg.funct3) {
+      //   case 0x0:
+      // }
   case 0x6F: // JAL
   case 0x67: // JALR
     case 0x23: // store
@@ -192,7 +192,7 @@ uint32_t gen_alu_control(idex_reg_t idex_reg) {
       alu_control = 0xBADCAFFE;
       break;
   }
-  return (extend, alu_control);
+  return (alu_control);
 }
 
 /**
@@ -249,15 +249,15 @@ uint32_t execute_alu(uint32_t alu_inp1, uint32_t alu_inp2, uint32_t alu_control)
       break;
 
     case 0xB: //mulh
-      result = (alu_inp1 * alu_inp2)[63:32];
+      result = (alu_inp1 * alu_inp2);
       break;
 
     case 0xC: //slli
-      result = (alu_inp1 << alu_inp2[0:4]);
+      result = (alu_inp1 << alu_inp2);
       break;
     
     case 0xD: //slri
-      result =(alu_inp1 >> alu_inp2[0:4]);
+      result =(alu_inp1 >> alu_inp2);
       break;
 
     default:

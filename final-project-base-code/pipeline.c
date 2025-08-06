@@ -58,6 +58,7 @@ ifid_reg_t stage_fetch(pipeline_wires_t* pwires_p, regfile_t* regfile_p, Byte* m
   if (!pwires_p->stall) { //Decode must check if pc stalls
     regfile_p->PC += 4;
   }
+  ifid_reg.instr_bits = instruction_bits;
 
   #ifdef DEBUG_CYCLE
   printf("[IF ]: Instruction [%08x]@[%08x]: ", instruction_bits, regfile_p->PC);
@@ -72,15 +73,18 @@ ifid_reg_t stage_fetch(pipeline_wires_t* pwires_p, regfile_t* regfile_p, Byte* m
  **/ 
 // Kirstin
 idex_reg_t stage_decode(ifid_reg_t ifid_reg, pipeline_wires_t* pwires_p, regfile_t* regfile_p) {
+  idex_reg_t idex_reg = {0};
 
-  idex_reg_t idex_reg = gen_control(ifid_reg.instr); // set control values
+  idex_reg = gen_control(ifid_reg.instr); // set control values
+
+  idex_reg.instr_bits = ifid_reg.instr_bits;
   idex_reg.read_imm = gen_imm(ifid_reg.instr); // read imm by getting the write_imm value from the fetch stage
   idex_reg.pc = ifid_reg.pc; // set PC to PC from fetch stage
   //pwires_p->c
 
   #ifdef DEBUG_CYCLE
-  printf("[ID ]: Instruction [%08x]@[%08x]: ", ifid_reg.instr.bits, idex_reg.pc);
-  decode_instruction(idex_reg.instr.bits);
+  printf("[ID ]: Instruction [%08x]@[%08x]: ", ifid_reg.instr_bits, idex_reg.pc);
+  decode_instruction(ifid_reg.instr_bits);
   #endif
   return idex_reg;
 }
@@ -92,9 +96,12 @@ idex_reg_t stage_decode(ifid_reg_t ifid_reg, pipeline_wires_t* pwires_p, regfile
 // Lex
 exmem_reg_t stage_execute(idex_reg_t idex_reg, pipeline_wires_t* pwires_p) {
   exmem_reg_t exmem_reg = {0};
+
+  exmem_reg.instr_bits = idex_reg.instr_bits;
+
   bool extend;
   int control_thing; 
-  (extend, control_thing)= gen_alu_control(idex_reg);
+  //(extend, control_thing) = gen_alu_control(idex_reg);
   switch (idex_reg.read_opcode) {
     case 0x33:
       exmem_reg.result = execute_alu(idex_reg.read_rs1, idex_reg.read_rs2, control_thing);
@@ -115,14 +122,15 @@ exmem_reg_t stage_execute(idex_reg_t idex_reg, pipeline_wires_t* pwires_p) {
       break; // idk what to do here
   }
 
+  // if (extend == true) {
+  //   exmem_reg = sign_extend_number(exmem_reg, size(exmem_reg));
+  // }
+
   #ifdef DEBUG_CYCLE
-  printf("[EX ]: Instruction [%08x]@[%08x]: ", idex_reg.instr.bits, idex_reg.pc);
-  decode_instruction(exmem_reg.instr.bits);
+  printf("[EX ]: Instruction [%08x]@[%08x]: ", exmem_reg.instr_bits, idex_reg.pc);
+  decode_instruction(exmem_reg.instr_bits);
   #endif
 
-  if (extend == true) {
-    exmem_reg = sign_extend_number(exmem_reg, size(exmem_reg));
-  }
   return exmem_reg;
 }
 
@@ -133,6 +141,8 @@ exmem_reg_t stage_execute(idex_reg_t idex_reg, pipeline_wires_t* pwires_p) {
 // Kirstin
 memwb_reg_t stage_mem(exmem_reg_t exmem_reg, pipeline_wires_t* pwires_p, Byte* memory_p, Cache* cache_p) {
   memwb_reg_t memwb_reg = {0};
+
+  memwb_reg.instr_bits = exmem_reg.instr_bits;
 
   memwb_reg.alu_result = exmem_reg.write_addr; // read the result from alu (write_addr) and write it to alu_result
   Alignment alignment;
@@ -155,8 +165,8 @@ memwb_reg_t stage_mem(exmem_reg_t exmem_reg, pipeline_wires_t* pwires_p, Byte* m
   memwb_reg.mem_read = load(memory_p, exmem_reg.instr_addr, alignment); // read the result from memory and write it to mem_read
   
   #ifdef DEBUG_CYCLE
-  printf("[MEM ]: Instruction [%08x]@[%08x]: ", memwb_reg.instr.bits, memwb_reg.pc);
-  decode_instruction(memwb_reg.instr.bits);
+  printf("[MEM ]: Instruction [%08x]@[%08x]: ", memwb_reg.instr_bits, memwb_reg.pc);
+  decode_instruction(memwb_reg.instr_bits);
   #endif
 
   return memwb_reg;
@@ -176,7 +186,8 @@ void stage_writeback(memwb_reg_t memwb_reg, pipeline_wires_t* pwires_p, regfile_
   }
 
   #ifdef DEBUG_CYCLE
-  printf("[WB ]: Instruction [%08x]@[%08x]: ", memwb_reg.instr.bits, memwb_reg.pc);
+  printf("[WB ]: Instruction [%08x]@[%08x]: ", memwb_reg.instr_bits, memwb_reg.pc);
+  decode_instruction(memwb_reg.instr_bits);
   #endif
   
 }
