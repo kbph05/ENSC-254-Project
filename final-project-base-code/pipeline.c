@@ -84,13 +84,14 @@ idex_reg_t stage_decode(ifid_reg_t ifid_reg, pipeline_wires_t* pwires_p, regfile
   idex_reg_t idex_reg = {0};
 
   idex_reg = gen_control(ifid_reg.instr); // set control values
-
-  idex_reg.read_rs1 = regfile_p->R[ifid_reg.write_rs1];
-  idex_reg.read_rs2 = regfile_p->R[ifid_reg.write_rs2];
-  idex_reg.read_imm = gen_imm(ifid_reg.instr);
-  idex_reg.instr_bits = ifid_reg.instr_bits;
+  idex_reg.read_rs1 = regfile_p->R[ifid_reg.write_rs1]; // pull rs1 from regfile
+  idex_reg.read_rs2 = regfile_p->R[ifid_reg.write_rs2]; // pull rs2 from regfile
+  idex_reg.read_imm = gen_imm(ifid_reg.instr); // generate an imm value
+  idex_reg.instr_bits = ifid_reg.instr_bits; // transfer instruction bits to next stage for debug cycle
   idex_reg.pc = ifid_reg.pc; // set PC to PC from fetch stage
 
+  // if we are writing back to reg file we need to save this value for the writeback stage
+  idex_reg.write_rd = ifid_reg.instr.itype.rd;
 
   #ifdef DEBUG_CYCLE
   printf("[ID ]: Instruction [%08x]@[%08x]: ", ifid_reg.instr_bits, ifid_reg.pc);
@@ -108,18 +109,31 @@ exmem_reg_t stage_execute(idex_reg_t idex_reg, pipeline_wires_t* pwires_p) {
   exmem_reg_t exmem_reg = {0};
 
   exmem_reg.instr_bits = idex_reg.instr_bits;
+  //bool extend;
+  uint32_t alu_control_signal; // control signal for the alu unit
+  uint32_t alu_inp2; // second input (could be imm or rs2)
 
-  bool extend;
-  int control_thing; 
+  if (idex_reg.alu_op) {alu_control_signal = gen_alu_control(idex_reg);} // if alu_op is 1 then generate the alu_control signal needed for the operation
+  if (idex_reg.alu_src) {alu_inp2 = idex_reg.read_imm;} else {alu_inp2 = idex_reg.read_rs2;} // determine the value for one of the inputs
 
-  (alu_op) ? exmem_reg.result = gen_alu_control(idex_reg);
-  (alu_src) ? exmem_reg.result = execute_alu(idex_reg.read_rs1, idex_reg.read_imm, ) : execute_alu(idex_reg.read_rs1, idex_reg.read_imm,); 
-  (mem_to_reg) ? exmem_reg.
-  (reg_write) ?
-  (mem_read) ?
+  exmem_reg.alu_result = execute_alu(idex_reg.read_rs1, alu_inp2, alu_control_signal); // compute the alu operation
+  exmem_reg.read_rs2 = idex_reg.read_rs2;
 
+  // these are all the control signals needed for next stages of cpu
+  exmem_reg.mem_read = idex_reg.mem_read; // transfer to memory stage
+  exmem_reg.mem_write = idex_reg.mem_write; // transfer to memory stage
+  exmem_reg.mem_to_reg = idex_reg.mem_to_reg; // transfer for WB stage
+  exmem_reg.reg_write = idex_reg.reg_write; // transfer for WB stage
+  exmem_reg.write_rd = idex_reg.write_rd;
 
+  #ifdef DEBUG_CYCLE
+  printf("[EX ]: Instruction [%08x]@[%08x]: ", exmem_reg.instr_bits, exmem_reg.pc);
+  decode_instruction(exmem_reg.instr_bits);
+  #endif
 
+  return exmem_reg;
+
+ /*
   // switch (idex_reg.read_opcode) {
   //   case 0x33:
   //     exmem_reg.result = execute_alu(idex_reg.read_rs1, idex_reg.read_rs2, control_thing);
@@ -143,13 +157,7 @@ exmem_reg_t stage_execute(idex_reg_t idex_reg, pipeline_wires_t* pwires_p) {
   // if (extend == true) {
   //   exmem_reg = sign_extend_number(exmem_reg, size(exmem_reg));
   // }
-
-  #ifdef DEBUG_CYCLE
-  printf("[EX ]: Instruction [%08x]@[%08x]: ", exmem_reg.instr_bits, exmem_reg.pc);
-  decode_instruction(exmem_reg.instr_bits);
-  #endif
-
-  return exmem_reg;
+  */
 }
 
 /**
@@ -160,13 +168,24 @@ exmem_reg_t stage_execute(idex_reg_t idex_reg, pipeline_wires_t* pwires_p) {
 memwb_reg_t stage_mem(exmem_reg_t exmem_reg, pipeline_wires_t* pwires_p, Byte* memory_p, Cache* cache_p) {
   memwb_reg_t memwb_reg = {0};
 
+  // for the debug cycle
   memwb_reg.instr_bits = exmem_reg.instr_bits;
-
   memwb_reg.pc = exmem_reg.pc;
 
-  memwb_reg.alu_result = sign_extend_number(exmem_reg.write_addr, 32); // read the result from alu (write_addr) and write it to alu_result
-  Alignment alignment;
+  // transfer data from last cycle:
+  memwb_reg.instr_addr = exmem_reg.instr_addr;
+  memwb_reg.alu_result = exmem_reg.alu_result;
+  memwb_reg.write_rd = exmem_reg.write_rd;
+  memwb_reg.read_rs2 = exmem_reg.read_rs2;
+
+  // transfer control signals from last cycle
+  memwb_reg.reg_write = exmem_reg.reg_write;
+  memwb_reg.mem_to_reg = exmem_reg.mem_to_reg;
+
+  //memwb_reg.alu_result = sign_extend_number(exmem_reg.write_addr, 32); // read the result from alu (write_addr) and write it to alu_result
   
+  // get the alignment for word value in memory
+  Alignment alignment;
   switch (exmem_reg.instr.itype.funct3) {
     case 0x0:
       alignment = LENGTH_BYTE;
@@ -181,8 +200,11 @@ memwb_reg_t stage_mem(exmem_reg_t exmem_reg, pipeline_wires_t* pwires_p, Byte* m
       break; 
   }
 
-  pwires_p->branch = gen_branch(exmem_reg.instr, exmem_reg.pc); // set branch value in pipeline wires
-  memwb_reg.mem_read = load(memory_p, exmem_reg.instr_addr, alignment); // read the result from memory and write it to mem_read
+  // from the control in execute stage:
+  if (exmem_reg.mem_write) {store(memory_p, memwb_reg.read_rs2, alignment, memwb_reg.alu_result);} // store in memory if the control signal is 1
+  if (exmem_reg.mem_read) {memwb_reg.mem_read = (memory_p, memwb_reg.alu_result, alignment); } // load from memory into mem_write if control signal is 1
+  
+  // MS2: for branch handling: (exmem_reg.branch) ?  gen_branch(exmem_reg.instr, exmem_reg.pc); // set branch value in pipeline wires
   
   #ifdef DEBUG_CYCLE
   printf("[MEM ]: Instruction [%08x]@[%08x]: ", memwb_reg.instr_bits, memwb_reg.pc);
@@ -198,13 +220,9 @@ memwb_reg_t stage_mem(exmem_reg_t exmem_reg, pipeline_wires_t* pwires_p, Byte* m
  **/ 
 // Kirstin
 void stage_writeback(memwb_reg_t memwb_reg, pipeline_wires_t* pwires_p, regfile_t* regfile_p) {
-  if(pwires_p->mem_to_reg == 1) {
-    regfile_p->R[pwires_p->pcsrc] = memwb_reg.mem_read;
-  }
-  else {
-    regfile_p->R[pwires_p->pcsrc] = memwb_reg.alu_result;
-  }
 
+  if (memwb_reg.mem_to_reg) {regfile_p->R[memwb_reg.write_rd] = memwb_reg.alu_result;} else {regfile_p->R[memwb_reg.write_rd] = memwb_reg.instr_addr;}
+  
   #ifdef DEBUG_CYCLE
   printf("[WB ]: Instruction [%08x]@[%08x]: ", memwb_reg.instr_bits, memwb_reg.pc);
   decode_instruction(memwb_reg.instr_bits);
