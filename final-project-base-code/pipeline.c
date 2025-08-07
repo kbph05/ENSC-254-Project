@@ -141,6 +141,37 @@ exmem_reg_t stage_execute(idex_reg_t idex_reg, pipeline_wires_t* pwires_p) {
 
 
 
+
+  idex_reg.alu_op = gen_alu_control(idex_reg);
+  if (idex_reg.read_opcode == 0x63) {
+    gen_branch
+  }
+  exmem_reg.result = (alu_src) ? execute_alu(idex_reg.read_rs1, idex_reg.read_imm, idex_reg.alu_op) : execute_alu(idex_reg.read_rs1, idex_reg.read_rs2, idex_reg.alu_op);
+  
+  switch (idex_reg.read_opcode) {
+    case 0x33: // Rtype
+      idex_reg.reg_write = 1; // should cascade down
+      // intentional fall through
+    case 0x13: // I type ALU
+    case 0x37: // LUI
+    case 0x6F: // jal
+    case 0x67: //JALR
+      idex_reg.mem_to_reg = 0;
+      break;
+    case 0x03: // I type load
+      idex_reg.mem_to_reg = 1;
+      idex_reg.mem_read = 1;
+      idex_reg.reg_write = 1;
+      break;
+    case 0x23: //S type
+      idex_reg.mem_write = 1;
+      break;
+    default: // idk what to put for error code
+      break;
+  }
+
+
+
   exmem_reg.pc = idex_reg.pc;
   exmem_reg.mem_read = idex_reg.mem_read;
   exmem_reg.mem_to_reg = idex_reg.mem_to_reg;
@@ -181,10 +212,8 @@ memwb_reg_t stage_mem(exmem_reg_t exmem_reg, pipeline_wires_t* pwires_p, Byte* m
 <<<<<<< HEAD
   // get the alignment for word value in memory
   Alignment alignment;
+  
   switch (exmem_reg.instr.itype.funct3) {
-=======
-  switch (exmem_reg.instr.itype.funct3) { //Helps decide if we are taking 0:7, 0:15, 0:31 of rs2
->>>>>>> eb00f2b (Check Second Wave of Text)
     case 0x0:
       alignment = LENGTH_BYTE; // 0:7
       break;
@@ -197,31 +226,10 @@ memwb_reg_t stage_mem(exmem_reg_t exmem_reg, pipeline_wires_t* pwires_p, Byte* m
     default: 
       break; 
   }
-<<<<<<< HEAD
 
-  // from the control in execute stage:
-  if (exmem_reg.mem_write) {store(memory_p, memwb_reg.read_rs2, alignment, memwb_reg.alu_result);} // store in memory if the control signal is 1
-  if (exmem_reg.mem_read) {memwb_reg.mem_read = load(memory_p, memwb_reg.alu_result, alignment); } // load from memory into mem_write if control signal is 1
-  if (exmem_reg.branch) {pwires_p->pcsrc = 1;} else {pwires_p->pcsrc = 0;} // when pcsrc = 1 then its a branch otherwise its not a branch 
-
-
-=======
-  
   pwires_p->branch = gen_branch(exmem_reg.instr, exmem_reg.pc); // set branch value in pipeline wires
-  // Lex Note: idk if that is how branch works, but i could be really stupid.
-
-  // Before performing this, we need to check if the conditions for store are fulfilled. i.e: Mem_write = 1, Mem_read = 0, reg_write = 0
-  if ((exmem_reg.mem_write == 1) && (exmem_reg.mem_read == 0)) { //idk where reg_write went
-    store(memory_p, exmem_reg.result, alignment, exmem_reg.read_rs2);
-  }
-
-  // Before performing this, you need to check the conditions of your MemRead. If = 1, then perform
-  if ((exmem_reg.mem_read == 1) && (exmem_reg.mem_to_reg == 1) && (exmem_reg.mem_write == 0)) {
-    memwb_reg.mem_read = load(memory_p, exmem_reg.result, alignment); // read the result from memory and write it to mem_read
-
-  }
+  memwb_reg.mem_read = load(memory_p, exmem_reg.instr_addr, alignment); // read the result from memory and write it to mem_read
   
->>>>>>> eb00f2b (Check Second Wave of Text)
   #ifdef DEBUG_CYCLE
   printf("[MEM ]: Instruction [%08x]@[%08x]: ", memwb_reg.instr_bits, memwb_reg.pc);
   decode_instruction(memwb_reg.instr_bits);

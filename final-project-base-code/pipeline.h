@@ -61,6 +61,7 @@ typedef struct
   bool mem_to_reg;
   bool mem_read;
   bool reg_write;
+  bool mem_read;
 
 }idex_reg_t;
 
@@ -72,6 +73,14 @@ typedef struct
   unsigned int result; //to store the computation results, would rather put it in write_addr
   uint32_t write_addr;
   unsigned int pc;
+
+
+  // Lex
+  bool mem_read;
+  bool mem_to_reg;
+  bool mem_write;
+  uint32_t read_rs2;
+  
 }exmem_reg_t;
 
 // Kirstin
@@ -84,6 +93,8 @@ typedef struct
   unsigned int alu_result;
   unsigned int mem_read; //rename
   unsigned int pc;
+
+  unsigned int read_rd; // Since this stage is the last stage, it needs to write back the result if need be
 }memwb_reg_t;
 
 
