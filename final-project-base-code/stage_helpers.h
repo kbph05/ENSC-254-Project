@@ -490,8 +490,7 @@ void gen_forward(pipeline_regs_t *pregs_p, pipeline_wires_t *pwires_p) {
         }
       }
   }
-
-
+}
 /**
  * Task   : Sets the pipeline wires for the hazard unit's control signals
  *           based on the pipeline register values.
