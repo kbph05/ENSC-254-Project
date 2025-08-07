@@ -14,7 +14,6 @@
  **/
 uint32_t gen_alu_control(idex_reg_t idex_reg) {
   uint32_t alu_control = 0;
-  bool extend = false;
   // Lex
   switch (idex_reg.read_opcode) {
     case 0x33: // R-type
@@ -169,7 +168,7 @@ uint32_t gen_alu_control(idex_reg_t idex_reg) {
           break;
         case 0x3: // (U), zero extend
           alu_control = 0x9;
-          extend = true;
+          //extend = true;
           idex_reg.read_rs1 = (unsigned)idex_reg.read_rs1;
           break;
         default:
@@ -177,9 +176,6 @@ uint32_t gen_alu_control(idex_reg_t idex_reg) {
           break;
       }
   case 0x3: //I type load
-      // switch (idex_reg.funct3) {
-      //   case 0x0:
-      // }
   case 0x6F: // JAL
   case 0x67: // JALR
     case 0x23: // store
@@ -340,52 +336,29 @@ idex_reg_t gen_control(Instruction instruction) {
  * output : bool
  * Kirstin
  **/
-bool gen_branch(Instruction instruction, int PC) {
+bool gen_branch(Instruction instruction, uint32_t read_rs1, uint32_t read_rs2) {
+  
   // if instruction is a branch instruction
   if (instruction.opcode == 0x63) {
     switch (instruction.sbtype.funct3) {
       case 0x0:
-        if (instruction.sbtype.rs1 == instruction.sbtype.rs2) {
-          // increment pc by instruction.sbtype.imm branch offset
-          PC += get_branch_offset(instruction);
-        }
-        break;
+        return (read_rs1 == read_rs2);
       case 0x1:
-        if (instruction.sbtype.rs1 != instruction.sbtype.rs2) {
-          // increment pc by instruction.sbtype.imm branch offset
-          PC += get_branch_offset(instruction);
-        }
-        break;
+        return (read_rs1 != read_rs2);
       case 0x4:
-        if (instruction.sbtype.rs1 < instruction.sbtype.rs2) {
-          // increment pc by instruction.sbtype.imm branch offset
-          PC += get_branch_offset(instruction);
-        }
-        break;
+        return (read_rs1 < read_rs2);
       case 0x5:
-        if (instruction.sbtype.rs1 >= instruction.sbtype.rs2) {
-          // increment pc by instruction.sbtype.imm branch offset
-          PC += get_branch_offset(instruction);
-        }
-        break;
+        return (read_rs1 >=read_rs2);
       case 0x6:
-        if (instruction.sbtype.rs1 < instruction.sbtype.rs2) {
-          // increment pc by instruction.sbtype.imm branch offset (zero extends)
-          PC += sign_extend_number(get_branch_offset(instruction), 32);
-        }
-        break;
+        return (read_rs1 < read_rs2);
       case 0x7:
-        if (instruction.sbtype.rs1 >= instruction.sbtype.rs2) {
-          // increment pc by instruction.sbtype.imm branch offset (zero extends)
-          PC += sign_extend_number(get_branch_offset(instruction), 32);
-        }
-        break;
+        return (read_rs1 >=read_rs2);
       default:
         break;
     }
-    return true;
   }
   return false;
+
 }
 
 /// PIPELINE FEATURES ///
@@ -397,12 +370,50 @@ bool gen_branch(Instruction instruction, int PC) {
  * output : None
  * Kirstin
  */
-void gen_forward(pipeline_regs_t *pregs_p, pipeline_wires_t *pwires_p)
-{
+void gen_forward(pipeline_regs_t *pregs_p, pipeline_wires_t *pwires_p) {
   /**
-   * YOUR CODE HERE
+   * 1. EX Hazard: When resolving an EX hazard (which will require a forwarding from EXMEM 
+        register  to  the  EX  stage),  the  simulator  should  print  the  following  line: “[FWD]: Resolving EX hazard on RS: xREG” 
+     
+        2. MEM  Hazard:  When  resolving  a  MEM  hazard  (which  will  require  a  forwarding  from 
+        MEMWB  register  to  the  EX  stage),  the  simulator  should  print  the  following  line: “[FWD]: Resolving MEM hazard on RS: xREG” 
    */
-  // connect pwires from one stage to another stage
+  pwires_p->forwardA = 0;
+  pwires_p->forwardB = 0;
+
+  printf("Checking EX hazard: write_rd = %d, rs1 = %d\n",
+  pregs_p->exmem_preg.out.write_rd, pregs_p->idex_preg.out.read_rs1);
+  
+  // exmem forwarding
+  if ((pregs_p->exmem_preg.out.reg_write && (pregs_p->exmem_preg.out.write_rd != 0)) && (pregs_p->exmem_preg.out.write_rd == pregs_p->idex_preg.out.read_rs1)) {
+    pwires_p->forwardA = 2; // (Forward from exmem_reg pipe stage)
+
+    printf("[FWD]: Resolving EX hazard on RS: x%d\n", pregs_p->idex_preg.out.read_rs1);
+
+  }
+  if ((pregs_p->exmem_preg.out.reg_write && (pregs_p->exmem_preg.out.write_rd != 0)) && (pregs_p->exmem_preg.out.write_rd == pregs_p->idex_preg.out.read_rs2)) {
+    pwires_p->forwardB = 2; // (Forward from exmem_reg pipe stage)
+    
+    printf("[FWD]: Resolving EX hazard on RS: x%dn", pregs_p->idex_preg.out.read_rs2);
+
+  }
+  
+
+  // memwb forwarding
+  if ((pregs_p->memwb_preg.out.reg_write && (pregs_p->memwb_preg.out.write_rd != 0)) && (pregs_p->memwb_preg.out.write_rd == pregs_p->idex_preg.out.read_rs1)) {
+    pwires_p->forwardA = 1; // (Forward from memwb_reg pipe stage)
+
+    printf("[FWD]: Resolving MEM hazard on RS: x%d\n", pregs_p->idex_preg.out.read_rs1);
+
+  }
+  if ((pregs_p->memwb_preg.out.reg_write && (pregs_p->memwb_preg.out.write_rd != 0)) && (pregs_p->memwb_preg.out.write_rd == pregs_p->idex_preg.out.read_rs2)) {
+    pwires_p->forwardB = 1; // (Forward from memwb_reg pipe stage)
+    printf("[FWD]: Resolving MEM hazard on RS: x%d\n", pregs_p->idex_preg.out.read_rs2);
+
+  }
+  
+  // 2a. memwb_reg.RegisterRd = ID/EX.RegisterRs1
+  // 2b. memwb_reg.RegisterRd = ID/EX.RegisterRs2
 
 }
 
@@ -413,8 +424,9 @@ void gen_forward(pipeline_regs_t *pregs_p, pipeline_wires_t *pwires_p)
  * output : None
  * Lex
  */
-void detect_hazard(pipeline_regs_t *pregs_p, pipeline_wires_t *pwires_p, regfile_t *regfile_p)
-{
+void detect_hazard(pipeline_regs_t *pregs_p, pipeline_wires_t *pwires_p, regfile_t *regfile_p) {
+  printf("detect_hazard() called\n");
+  gen_forward(pregs_p, pwires_p);
   
 }
 

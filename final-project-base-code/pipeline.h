@@ -51,9 +51,6 @@ typedef struct
   uint32_t read_imm;
   unsigned int pc;
   
-  // current stage:
-  bool reg_write;
-
   // next stage:
   bool alu_op;
   bool alu_src;
@@ -61,6 +58,7 @@ typedef struct
   bool mem_write;
   bool mem_to_reg;
   bool mem_read;
+  bool reg_write;
 
 }idex_reg_t;
 
@@ -71,12 +69,14 @@ typedef struct
   uint32_t instr_bits;
   unsigned int alu_result; //to store the computation results
   unsigned int write_rd; // to store the address of rd for regfile
+  unsigned int read_rs1;
   unsigned int read_rs2;
   unsigned int pc;
 
   // next stage:
   bool mem_read;
   bool mem_write;
+  bool branch;
 
   bool mem_to_reg;
   bool reg_write;
@@ -89,14 +89,14 @@ typedef struct
   Instruction instr;
   uint32_t instr_bits;
   uint32_t instr_addr;
-  unsigned int read_rs2;
 
   unsigned int alu_result;
   unsigned int mem_read; //rename
   unsigned int pc;
-  unsigned int write_rs2;
+  unsigned int read_rs2;
   unsigned int write_rd;
 
+  // next stage:
   bool mem_to_reg;
   bool reg_write;
 
@@ -148,6 +148,10 @@ typedef struct
   bool pcsrc; // manages the multiplexer with PC + 4  (are we branching or just going to next instruction) 
   uint32_t pc_src0; // adds 4 to PC (for when the next instruction is to be fetched)
   uint32_t pc_src1; // PC += imm (yes branch or j-type)
+
+  int forwardA;
+  int forwardB;
+
 
 }pipeline_wires_t;
 
