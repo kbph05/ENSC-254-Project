@@ -435,11 +435,10 @@ void gen_forward(pipeline_regs_t *pregs_p, pipeline_wires_t *pwires_p) {
       temp_rs1 = pregs_p->idex_preg.out.instr.sbtype.rs1;
       temp_rs2 = pregs_p->idex_preg.out.instr.sbtype.rs2;
       break;
-    case 0x6F: // JAL
+    case 0x67: // JALR, SKIPPED JAL CUZ IT DOESN'T USE ANY
       temp_rs1 = pregs_p->idex_preg.out.instr.itype.rs1;
       break;
-    case 0x67: // JALR
-      temp_rs1 = pregs_p->idex_preg.out.instr.itype.rs1;
+    default:
       break;
   }
 
@@ -503,9 +502,88 @@ void gen_forward(pipeline_regs_t *pregs_p, pipeline_wires_t *pwires_p) {
 void detect_hazard(pipeline_regs_t *pregs_p, pipeline_wires_t *pwires_p, regfile_t *regfile_p) {
   printf("detect_hazard() called\n");
   gen_forward(pregs_p, pwires_p);
-  
-}
+  uint8_t read_rs1 = 0;
+  uint8_t read_rs2 = 0;
+  bool read_rs1_usage = false;
+  bool read_rs2_usage = false;
+// LOAD USE HAZARD
 
+  pwires_p->idex_bubble_insert = false; // reset code
+  pwires_p->stall_insert = false;
+
+  // Extract current values
+  ifid_reg_t ifid_data = pregs_p->ifid_preg.out;
+  idex_reg_t idex_data = pregs_p->idex_preg.out;
+
+  if (ifid_data.instr_bits != 0 && idex_data.instr_bits != 0 && idex.rd != 0 && idex.mem_read) {
+    // initializing needed variables. We need the destination of data, and also to track if they are being used
+
+    // Checks IF/ID instructions to see which registers are being used
+    switch (ifid_data.instr.opcode) {
+      case 0x33: //R type
+        read_rs1 = ifid_data.instr.rtype.rs1;
+        read_rs2 = ifid_data.instr.rtype.rs2;
+        read_rs1_usage = true;
+        read_rs2_usage = true;
+        break;
+
+
+      case 0x13: //I type without load
+        read_rs1 = ifid_data.instr.itype.rs1;
+        read_rs1_usage = true;
+        break;
+        // rs2 is just an immediate
+
+      case 0x03: //Load
+        read_rs1 = ifid_data.instr.itype.rs1;
+        read_rs1_usage = true;
+        break;
+        // once again, rs2 is an immedaite
+
+      case 0x23: //store
+        read_rs1 = ifid_data.instr.stype.rs1;
+        read_rs2 = ifid_data.instr.stype.rs2;
+        read_rs1_usage = true;
+        read_rs2_usage = true;
+        break;
+
+      case 0x63: //Branch
+        read_rs1 = ifid_data.instr.sbtype.rs1;
+        read_rs2 = ifid_data.instr.sbtype.rs2;
+        read_rs1_usage = true;
+        read_rs2_usage = true;
+        break;
+
+      case 0x67: //JALR
+        read_rs1 = ifid_data.instr.itype.rs1;
+        read_rs1_usage = true;
+        break;
+      default:
+        break; //Everything else does not use a register
+    }
+
+    // Hazard exist if the ifid_data.rd matches with any of the registered used, read_r#_usage is true and the provided register is not x0
+
+    if (((read_rs1_usage) && (read_rs1 == idex_data.rd) && (read_rs1 != 0)) || ((read_rs2 == idex_data.rd) && (read_rs2_usage) && (read_rs2 != 0))) {
+      pwires_p->idex_bubble_insert = true;
+      pwires_p->stall_insert = true;
+      stall_counter++;
+
+
+      #ifdef DEBUG_CYCLE
+      printf("[HZD]: Stalling and rewriting PC: 0x%08x\n", ifid_data.instr_addr);
+      #endif
+    }
+
+  }
+  // Control Hazard
+
+
+    if ((gen_branch(idex_data.instr, read_rs1, read_rs2)) && read_rs1 != 0 && read_rs2 != 0) { //Checks if the branch is taken and whether the compared registers are valid (aka, not x0)
+      pwires_p->flush_insert = true;
+      break;
+    }
+}
 ///////////////////////////////////////////////////////////////////////////////
 
 /// RESERVED FOR PRINTING REGISTER TRACE AFTER EACH CLOCK CYCLE ///

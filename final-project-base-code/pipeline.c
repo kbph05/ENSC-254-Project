@@ -66,7 +66,11 @@ ifid_reg_t stage_fetch(pipeline_wires_t* pwires_p, regfile_t* regfile_p, Byte* m
   //   regfile_p->PC += 4;
   //   stall_counter++;
   // }
-  ifid_reg.instr_bits = instruction_bits;
+  if (pwire_p->flush_insert) {
+    ifid_reg.instr_bits = 0x00000013 //set to NOP
+  } else {
+    ifid_reg.instr_bits = instruction_bits;
+  }
 
   #ifdef DEBUG_CYCLE
   printf("[IF ]: Instruction [%08x]@[%08x]: ", instruction_bits, ifid_reg.pc);
@@ -107,8 +111,11 @@ idex_reg_t stage_decode(ifid_reg_t ifid_reg, pipeline_wires_t* pwires_p, regfile
 // Lex
 exmem_reg_t stage_execute(idex_reg_t idex_reg, pipeline_wires_t* pwires_p) {
   exmem_reg_t exmem_reg = {0};
-
-  exmem_reg.instr_bits = idex_reg.instr_bits;
+  if (pwires_p->flush_insert) {
+    exmem_reg.instr_bits = 0x00000013
+  } else {
+    exmem_reg.instr_bits = idex_reg.instr_bits;
+  }
   uint32_t alu_control_signal; // control signal for the alu unit
   uint32_t alu_inp2; // second input (could be imm or rs2)
 
@@ -147,7 +154,11 @@ memwb_reg_t stage_mem(exmem_reg_t exmem_reg, pipeline_wires_t* pwires_p, Byte* m
   memwb_reg_t memwb_reg = {0};
 
   // for the debug cycle
-  memwb_reg.instr_bits = exmem_reg.instr_bits;
+  if (pwires_p->flush_insert) {
+    memwb_reg.instr_bits = 0x00000013
+  } else {
+    memwb_reg.instr_bits = exmem_reg.instr_bits;
+  }
   memwb_reg.pc = exmem_reg.pc;
 
   // transfer data from last cycle:
