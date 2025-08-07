@@ -109,26 +109,75 @@ exmem_reg_t stage_execute(idex_reg_t idex_reg, pipeline_wires_t* pwires_p) {
   exmem_reg_t exmem_reg = {0};
 
   exmem_reg.instr_bits = idex_reg.instr_bits;
-  uint32_t alu_control_signal; // control signal for the alu unit
-  uint32_t alu_inp2; // second input (could be imm or rs2)
 
-  if (idex_reg.alu_op) {alu_control_signal = gen_alu_control(idex_reg);} // if alu_op is 1 then generate the alu_control signal needed for the operation
-  if (idex_reg.alu_src) {alu_inp2 = idex_reg.read_imm;} else {alu_inp2 = idex_reg.read_rs2;} // determine the value for one of the inputs
 
-  exmem_reg.alu_result = execute_alu(idex_reg.read_rs1, alu_inp2, alu_control_signal); // compute the alu operation
+  idex_reg.alu_op = gen_alu_control(idex_reg);
+  if (idex_reg.read_opcode == 0x63) {
+    gen_branch
+  }
+  exmem_reg.result = (alu_src) ? execute_alu(idex_reg.read_rs1, idex_reg.read_imm, idex_reg.alu_op) : execute_alu(idex_reg.read_rs1, idex_reg.read_rs2, idex_reg.alu_op);
+  
+  switch (idex_reg.read_opcode) {
+    case 0x33: // Rtype
+      idex_reg.reg_write = 1; // should cascade down
+      // intentional fall through
+    case 0x13: // I type ALU
+    case 0x37: // LUI
+    case 0x6F: // jal
+    case 0x67: //JALR
+      idex_reg.mem_to_reg = 0;
+      break;
+    case 0x03: // I type load
+      idex_reg.mem_to_reg = 1;
+      idex_reg.mem_read = 1;
+      idex_reg.reg_write = 1;
+      break;
+    case 0x23: //S type
+      idex_reg.mem_write = 1;
+      break;
+    default: // idk what to put for error code
+      break;
+  }
+
+
+
+
+  idex_reg.alu_op = gen_alu_control(idex_reg);
+  if (idex_reg.read_opcode == 0x63) {
+    gen_branch
+  }
+  exmem_reg.result = (alu_src) ? execute_alu(idex_reg.read_rs1, idex_reg.read_imm, idex_reg.alu_op) : execute_alu(idex_reg.read_rs1, idex_reg.read_rs2, idex_reg.alu_op);
+  
+  switch (idex_reg.read_opcode) {
+    case 0x33: // Rtype
+      idex_reg.reg_write = 1; // should cascade down
+      // intentional fall through
+    case 0x13: // I type ALU
+    case 0x37: // LUI
+    case 0x6F: // jal
+    case 0x67: //JALR
+      idex_reg.mem_to_reg = 0;
+      break;
+    case 0x03: // I type load
+      idex_reg.mem_to_reg = 1;
+      idex_reg.mem_read = 1;
+      idex_reg.reg_write = 1;
+      break;
+    case 0x23: //S type
+      idex_reg.mem_write = 1;
+      break;
+    default: // idk what to put for error code
+      break;
+  }
+
+
+
+  exmem_reg.pc = idex_reg.pc;
+  exmem_reg.mem_read = idex_reg.mem_read;
+  exmem_reg.mem_to_reg = idex_reg.mem_to_reg;
+  exmem_reg.mem_write = idex_reg.mem_write;
+
   exmem_reg.read_rs2 = idex_reg.read_rs2;
-  exmem_reg.read_rs1 = idex_reg.read_rs1;
-
-  // these are all the control signals needed for next stages of cpu
-  exmem_reg.mem_read = idex_reg.mem_read; // transfer to memory stage
-  exmem_reg.mem_write = idex_reg.mem_write; // transfer to memory stage
-  exmem_reg.mem_to_reg = idex_reg.mem_to_reg; // transfer for WB stage
-  exmem_reg.reg_write = idex_reg.reg_write; // transfer for WB stage
-  exmem_reg.write_rd = idex_reg.write_rd;
-
-  // branch condition
-  exmem_reg.branch = gen_branch(exmem_reg.instr, exmem_reg.read_rs1, exmem_reg.read_rs2); 
-
 
   #ifdef DEBUG_CYCLE
   printf("[EX ]: Instruction [%08x]@[%08x]: ", exmem_reg.instr_bits, exmem_reg.pc);
@@ -144,7 +193,7 @@ exmem_reg_t stage_execute(idex_reg_t idex_reg, pipeline_wires_t* pwires_p) {
  **/ 
 // Kirstin
 memwb_reg_t stage_mem(exmem_reg_t exmem_reg, pipeline_wires_t* pwires_p, Byte* memory_p, Cache* cache_p) {
-  memwb_reg_t memwb_reg = {0};
+  memwb_reg_t memwb_reg = {0}; // establishing new memwb_reg
 
   // for the debug cycle
   memwb_reg.instr_bits = exmem_reg.instr_bits;
@@ -160,33 +209,34 @@ memwb_reg_t stage_mem(exmem_reg_t exmem_reg, pipeline_wires_t* pwires_p, Byte* m
   memwb_reg.reg_write = exmem_reg.reg_write;
   memwb_reg.mem_to_reg = exmem_reg.mem_to_reg;
   
+<<<<<<< HEAD
   // get the alignment for word value in memory
   Alignment alignment;
+  
   switch (exmem_reg.instr.itype.funct3) {
     case 0x0:
-      alignment = LENGTH_BYTE;
+      alignment = LENGTH_BYTE; // 0:7
       break;
     case 0x1:
-      alignment = LENGTH_HALF_WORD;
+      alignment = LENGTH_HALF_WORD; // 0:15
       break;
     case 0x2:
-      alignment = LENGTH_WORD;
+      alignment = LENGTH_WORD; // 0:31
       break;
     default: 
       break; 
   }
 
-  // from the control in execute stage:
-  if (exmem_reg.mem_write) {store(memory_p, memwb_reg.read_rs2, alignment, memwb_reg.alu_result);} // store in memory if the control signal is 1
-  if (exmem_reg.mem_read) {memwb_reg.mem_read = load(memory_p, memwb_reg.alu_result, alignment); } // load from memory into mem_write if control signal is 1
-  if (exmem_reg.branch) {pwires_p->pcsrc = 1;} else {pwires_p->pcsrc = 0;} // when pcsrc = 1 then its a branch otherwise its not a branch 
-
-
+  pwires_p->branch = gen_branch(exmem_reg.instr, exmem_reg.pc); // set branch value in pipeline wires
+  memwb_reg.mem_read = load(memory_p, exmem_reg.instr_addr, alignment); // read the result from memory and write it to mem_read
+  
   #ifdef DEBUG_CYCLE
   printf("[MEM ]: Instruction [%08x]@[%08x]: ", memwb_reg.instr_bits, memwb_reg.pc);
   decode_instruction(memwb_reg.instr_bits);
   #endif
+  memwb_reg.read_rd
 
+  // Missing forward to rd and shit and what not
   return memwb_reg;
 }
 
