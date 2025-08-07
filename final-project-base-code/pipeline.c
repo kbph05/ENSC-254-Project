@@ -34,7 +34,7 @@ void bootstrap(pipeline_wires_t* pwires_p, pipeline_regs_t* pregs_p, regfile_t* 
 // Lex
 ifid_reg_t stage_fetch(pipeline_wires_t* pwires_p, regfile_t* regfile_p, Byte* memory_p) {
   ifid_reg_t ifid_reg = {0};
-  uint32_t instruction_bits;
+  uint32_t instruction_bits = 0;
   
   // need to find the address (this is the multiplexer before instruction memory)
   if (pwires_p->pcsrc == 0) {
@@ -61,6 +61,7 @@ ifid_reg_t stage_fetch(pipeline_wires_t* pwires_p, regfile_t* regfile_p, Byte* m
   }
 
   ifid_reg.instr = parse_instruction(instruction_bits); // parse the instruction bits into an Instruction struct
+  ifid_reg.instr_bits = instruction_bits;
 
   // if (!pwires_p->stall) { //Decode must check if pc stalls
   //   regfile_p->PC += 4;
@@ -84,8 +85,11 @@ idex_reg_t stage_decode(ifid_reg_t ifid_reg, pipeline_wires_t* pwires_p, regfile
   idex_reg_t idex_reg = {0};
 
   idex_reg = gen_control(ifid_reg.instr); // set control values
-  idex_reg.read_rs1 = regfile_p->R[ifid_reg.write_rs1]; // pull rs1 from regfile
-  idex_reg.read_rs2 = regfile_p->R[ifid_reg.write_rs2]; // pull rs2 from regfile
+  // idex_reg.read_rs1 = regfile_p->R[ifid_reg.instr.itype.rs1];// pull rs1 from regfile
+  // idex_reg.read_rs2 = regfile_p->R[ifid_reg.instr.itype.rs2];// pull rs2 from regfile
+
+  idex_reg.read_rs1 = regfile_p->R[ifid_reg.write_rs1]; 
+  idex_reg.read_rs2 = regfile_p->R[ifid_reg.write_rs2]; 
   idex_reg.read_imm = gen_imm(ifid_reg.instr); // generate an imm value
   idex_reg.instr_bits = ifid_reg.instr_bits; // transfer instruction bits to next stage for debug cycle
   idex_reg.pc = ifid_reg.pc; // set PC to PC from fetch stage
@@ -108,7 +112,11 @@ idex_reg_t stage_decode(ifid_reg_t ifid_reg, pipeline_wires_t* pwires_p, regfile
 exmem_reg_t stage_execute(idex_reg_t idex_reg, pipeline_wires_t* pwires_p) {
   exmem_reg_t exmem_reg = {0};
 
+  exmem_reg.instr = idex_reg.instr; 
+  exmem_reg.pc = idex_reg.pc;
   exmem_reg.instr_bits = idex_reg.instr_bits;
+  exmem_reg.instr_addr = idex_reg.instr_addr;
+
   uint32_t alu_control_signal; // control signal for the alu unit
   uint32_t alu_inp2; // second input (could be imm or rs2)
 
@@ -128,7 +136,13 @@ exmem_reg_t stage_execute(idex_reg_t idex_reg, pipeline_wires_t* pwires_p) {
 
   // branch condition
   exmem_reg.branch = gen_branch(exmem_reg.instr, exmem_reg.read_rs1, exmem_reg.read_rs2); 
-
+  if (exmem_reg.branch) {
+    pwires_p->pcsrc = 1;
+    pwires_p->pc_src1 = idex_reg.pc + idex_reg.read_imm;  // Target address
+    branch_counter++; // Count taken branches
+  } else {
+    pwires_p->pcsrc = 0;
+  }
 
   #ifdef DEBUG_CYCLE
   printf("[EX ]: Instruction [%08x]@[%08x]: ", exmem_reg.instr_bits, exmem_reg.pc);
@@ -155,6 +169,7 @@ memwb_reg_t stage_mem(exmem_reg_t exmem_reg, pipeline_wires_t* pwires_p, Byte* m
   memwb_reg.alu_result = exmem_reg.alu_result;
   memwb_reg.write_rd = exmem_reg.write_rd;
   memwb_reg.read_rs2 = exmem_reg.read_rs2;
+  memwb_reg.instr = exmem_reg.instr;
 
   // transfer control signals from last cycle
   memwb_reg.reg_write = exmem_reg.reg_write;
@@ -172,15 +187,14 @@ memwb_reg_t stage_mem(exmem_reg_t exmem_reg, pipeline_wires_t* pwires_p, Byte* m
     case 0x2:
       alignment = LENGTH_WORD;
       break;
-    default: 
-      break; 
+    default:
+      alignment = LENGTH_WORD;
+      break;
   }
 
   // from the control in execute stage:
   if (exmem_reg.mem_write) {store(memory_p, memwb_reg.read_rs2, alignment, memwb_reg.alu_result);} // store in memory if the control signal is 1
   if (exmem_reg.mem_read) {memwb_reg.mem_read = load(memory_p, memwb_reg.alu_result, alignment); } // load from memory into mem_write if control signal is 1
-  if (exmem_reg.branch) {pwires_p->pcsrc = 1;} else {pwires_p->pcsrc = 0;} // when pcsrc = 1 then its a branch otherwise its not a branch 
-
 
   #ifdef DEBUG_CYCLE
   printf("[MEM ]: Instruction [%08x]@[%08x]: ", memwb_reg.instr_bits, memwb_reg.pc);
@@ -197,7 +211,10 @@ memwb_reg_t stage_mem(exmem_reg_t exmem_reg, pipeline_wires_t* pwires_p, Byte* m
 // Kirstin
 void stage_writeback(memwb_reg_t memwb_reg, pipeline_wires_t* pwires_p, regfile_t* regfile_p) {
 
-  if (memwb_reg.mem_to_reg) {regfile_p->R[memwb_reg.write_rd] = memwb_reg.alu_result;} else {regfile_p->R[memwb_reg.write_rd] = memwb_reg.instr_addr;}
+  if (memwb_reg.reg_write && memwb_reg.write_rd != 0) {
+    regfile_p->R[memwb_reg.write_rd] = memwb_reg.mem_to_reg ? memwb_reg.mem_read : memwb_reg.alu_result;
+  }
+
   
   #ifdef DEBUG_CYCLE
   printf("[WB ]: Instruction [%08x]@[%08x]: ", memwb_reg.instr_bits, memwb_reg.pc);
@@ -211,7 +228,8 @@ void stage_writeback(memwb_reg_t memwb_reg, pipeline_wires_t* pwires_p, regfile_
 /** 
  * excite the pipeline with one clock cycle
  **/
-void cycle_pipeline(regfile_t* regfile_p, Byte* memory_p, Cache* cache_p, pipeline_regs_t* pregs_p, pipeline_wires_t* pwires_p, bool* ecall_exit) {
+void cycle_pipeline(regfile_t* regfile_p, Byte* memory_p, Cache* cache_p, pipeline_regs_t* pregs_p, pipeline_wires_t* pwires_p, bool* ecall_exit) 
+{
   #ifdef DEBUG_CYCLE
   printf("v==============");
   printf("Cycle Counter = %5ld", total_cycle_counter);
@@ -225,7 +243,7 @@ void cycle_pipeline(regfile_t* regfile_p, Byte* memory_p, Cache* cache_p, pipeli
   
   pregs_p->idex_preg.inp  = stage_decode    (pregs_p->ifid_preg.out, pwires_p, regfile_p);
 
-  detect_hazard(pregs_p, pwires_p, regfile_p);
+  gen_forward(pregs_p, pwires_p);
 
   pregs_p->exmem_preg.inp = stage_execute   (pregs_p->idex_preg.out, pwires_p);
   
@@ -265,10 +283,11 @@ void cycle_pipeline(regfile_t* regfile_p, Byte* memory_p, Cache* cache_p, pipeli
    * If more functionality on ecall needs to be added, it can be done
    * by adding more conditions on the value of R[10]
    */
-  if( (pregs_p->memwb_preg.out.instr.bits == 0x00000073) &&
-      (regfile_p->R[10] == 10) )
+
+  if( (pregs_p->memwb_preg.out.instr.bits == 0x00000073) && (regfile_p->R[10] == 10) )
   {
     *(ecall_exit) = true;
   }
+
 }
 
