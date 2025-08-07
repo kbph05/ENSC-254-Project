@@ -378,44 +378,120 @@ void gen_forward(pipeline_regs_t *pregs_p, pipeline_wires_t *pwires_p) {
         2. MEM  Hazard:  When  resolving  a  MEM  hazard  (which  will  require  a  forwarding  from 
         MEMWB  register  to  the  EX  stage),  the  simulator  should  print  the  following  line: “[FWD]: Resolving MEM hazard on RS: xREG” 
    */
-  pwires_p->forwardA = 0;
-  pwires_p->forwardB = 0;
+  pwires_p->forwardA = 0; //for rs1
+  pwires_p->forwardB = 0; // for rs2
 
   printf("Checking EX hazard: write_rd = %d, rs1 = %d\n",
   pregs_p->exmem_preg.out.write_rd, pregs_p->idex_preg.out.read_rs1);
   
-  // exmem forwarding
-  if ((pregs_p->exmem_preg.out.reg_write && (pregs_p->exmem_preg.out.write_rd != 0)) && (pregs_p->exmem_preg.out.write_rd == pregs_p->idex_preg.out.read_rs1)) {
-    pwires_p->forwardA = 2; // (Forward from exmem_reg pipe stage)
+  // // exmem forwarding
+  // if ((pregs_p->exmem_preg.out.reg_write && (pregs_p->exmem_preg.out.write_rd != 0)) && (pregs_p->exmem_preg.out.write_rd == pregs_p->idex_preg.out.read_rs1)) {
+  //   pwires_p->forwardA = 2; // (Forward from exmem_reg pipe stage)
 
-    printf("[FWD]: Resolving EX hazard on RS: x%d\n", pregs_p->idex_preg.out.read_rs1);
+  //   printf("[FWD]: Resolving EX hazard on RS: x%d\n", pregs_p->idex_preg.out.read_rs1);
 
-  }
-  if ((pregs_p->exmem_preg.out.reg_write && (pregs_p->exmem_preg.out.write_rd != 0)) && (pregs_p->exmem_preg.out.write_rd == pregs_p->idex_preg.out.read_rs2)) {
-    pwires_p->forwardB = 2; // (Forward from exmem_reg pipe stage)
+  // }
+  // if ((pregs_p->exmem_preg.out.reg_write && (pregs_p->exmem_preg.out.write_rd != 0)) && (pregs_p->exmem_preg.out.write_rd == pregs_p->idex_preg.out.read_rs2)) {
+  //   pwires_p->forwardB = 2; // (Forward from exmem_reg pipe stage)
     
-    printf("[FWD]: Resolving EX hazard on RS: x%dn", pregs_p->idex_preg.out.read_rs2);
+  //   printf("[FWD]: Resolving EX hazard on RS: x%dn", pregs_p->idex_preg.out.read_rs2);
 
-  }
+  // }
   
 
-  // memwb forwarding
-  if ((pregs_p->memwb_preg.out.reg_write && (pregs_p->memwb_preg.out.write_rd != 0)) && (pregs_p->memwb_preg.out.write_rd == pregs_p->idex_preg.out.read_rs1)) {
-    pwires_p->forwardA = 1; // (Forward from memwb_reg pipe stage)
+  // // memwb forwarding
+  // if ((pregs_p->memwb_preg.out.reg_write && (pregs_p->memwb_preg.out.write_rd != 0)) && (pregs_p->memwb_preg.out.write_rd == pregs_p->idex_preg.out.read_rs1)) {
+  //   pwires_p->forwardA = 1; // (Forward from memwb_reg pipe stage)
 
-    printf("[FWD]: Resolving MEM hazard on RS: x%d\n", pregs_p->idex_preg.out.read_rs1);
+  //   printf("[FWD]: Resolving MEM hazard on RS: x%d\n", pregs_p->idex_preg.out.read_rs1);
 
+  // }
+  // if ((pregs_p->memwb_preg.out.reg_write && (pregs_p->memwb_preg.out.write_rd != 0)) && (pregs_p->memwb_preg.out.write_rd == pregs_p->idex_preg.out.read_rs2)) {
+  //   pwires_p->forwardB = 1; // (Forward from memwb_reg pipe stage)
+  //   printf("[FWD]: Resolving MEM hazard on RS: x%d\n", pregs_p->idex_preg.out.read_rs2);
+
+  // }
+  // First check if the function is using rs1 or rs2
+  uint8_t temp_rs1 = 0;
+  uint8_t temp_rs2 = 0;
+  uint32_t read_opcode = pregs_p->idex_preg.out.instr.opcode;
+
+  switch (read_opcode) {
+    case 0x33: //R type uses both rs1 and rs2, so need to check those
+      temp_rs1 = pregs_p->idex_preg.out.instr.rtype.rs1;
+      temp_rs2 = pregs_p->idex_preg.out.instr.rtype.rs2;
+      break;
+    case 0x13: // I type without load, rs2 is just an immediate
+      temp_rs1 = pregs_p->idex_preg.out.instr.itype.rs1;
+      break;
+    case 0x03: // Load, rs2 excluded since only importing data to rs1
+      temp_rs1 = pregs_p->idex_preg.out.instr.itype.rs1;
+      break;
+    case 0x23: // Store
+      temp_rs1 = pregs_p->idex_preg.out.instr.stype.rs1;
+      temp_rs2 = pregs_p->idex_preg.out.instr.stype.rs2;
+      break;
+    case 0x63: // Branch
+      temp_rs1 = pregs_p->idex_preg.out.instr.sbtype.rs1;
+      temp_rs2 = pregs_p->idex_preg.out.instr.sbtype.rs2;
+      break;
+    case 0x6F: // JAL
+      temp_rs1 = pregs_p->idex_preg.out.instr.itype.rs1;
+      break;
+    case 0x67: // JALR
+      temp_rs1 = pregs_p->idex_preg.out.instr.itype.rs1;
+      break;
   }
-  if ((pregs_p->memwb_preg.out.reg_write && (pregs_p->memwb_preg.out.write_rd != 0)) && (pregs_p->memwb_preg.out.write_rd == pregs_p->idex_preg.out.read_rs2)) {
-    pwires_p->forwardB = 1; // (Forward from memwb_reg pipe stage)
-    printf("[FWD]: Resolving MEM hazard on RS: x%d\n", pregs_p->idex_preg.out.read_rs2);
 
+  // Set variables to check for reg_write = 1 and check if match_rd =rs1 or rs2, is writing to this destination
+  // need to be done on both exmem and wbmem
+
+  // EX/MEM
+  bool exmem_temp_reg_write = pregs_p->exmem_preg.out.reg_write;
+  uint8_t exmem_temp_rd = pregs_p->exmem_preg.out.rd;
+
+  // WB/MEM
+  bool memwb_temp_reg_write = pregs_p->memwb_preg.out.reg_write;
+  uint8_t memwb_temp_rd = pregs_p->memwb_preg.out.rd;
+
+  // Check EX/MEM stage
+
+  if (exmem_temp_reg_write != 0 && exmem_temp_rd != 0) {
+    if (exmem_temp_rd == temp_rs1) {
+      pwires_p->forwardA = 2;
+      fwd_exex_counter += 1;
+      #ifdef DEBUG_CYCLE
+        fprintf("[FWD]: Resolving EX hazard on RS1: x&d\n", temp_rs1);
+      #endif
+    }
+
+  // This essentially checks if the alu src if the opcode uses rs2 (checcks validity of rs2)
+    if ((read_opcode == 0x33) || (read_opcode == 0x23) || (read_opcode == 0x63)) {
+        if (exmem_temp_rd == temp_rs2) {
+          pwires_p->forwardB = 2;
+          fwd_exex_counter += 1;
+          #ifdef DEBUG_CYCLE
+          fprintf("[FWD]: Resolving EX hazard on RS2: x&d\n", temp_rs2);
+          #endif
+        }
+      }
   }
-  
-  // 2a. memwb_reg.RegisterRd = ID/EX.RegisterRs1
-  // 2b. memwb_reg.RegisterRd = ID/EX.RegisterRs2
+  // Check for MEM/WB stage now
+  if (memwb_temp_reg_write != 0 && memwb_temp_rd != 0) {
+    if ((memwb_temp_rd == temp_rs1) && (pwires_p->forwardA == 0)) {
+      pwires_p->forwardA = 1;
+    }
+    if ((read_opcode == 0x33) || (read_opcode == 0x23) || (read_opcode == 0x63)) {
+        if ((memwb_temp_rd == temp_rs2) && (pwires_p->forwardB == 0)) {
+          pwires_p->forwardB = 2;
+          fwd_exex_counter += 1;
+          #ifdef DEBUG_CYCLE
+          fprintf("[FWD]: Resolving EX hazard on RS2: x&d\n", temp_rs2);
+          #endif
+        }
+      }
+  }
 
-}
 
 /**
  * Task   : Sets the pipeline wires for the hazard unit's control signals
