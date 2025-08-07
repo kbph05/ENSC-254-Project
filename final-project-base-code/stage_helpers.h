@@ -381,8 +381,8 @@ void gen_forward(pipeline_regs_t *pregs_p, pipeline_wires_t *pwires_p) {
   pwires_p->forwardA = 0; //for rs1
   pwires_p->forwardB = 0; // for rs2
 
-  printf("Checking EX hazard: write_rd = %d, rs1 = %d\n",
-  pregs_p->exmem_preg.out.write_rd, pregs_p->idex_preg.out.read_rs1);
+  // printf("Checking EX hazard: write_rd = %d, rs1 = %d\n", pregs_p->idex_preg.write_rd, pregs_p->idex_preg.read_rs1);
+  // pregs_p->exmem_preg.out.write_rd, pregs_p->idex_preg.out.read_rs1);
   
   // // exmem forwarding
   // if ((pregs_p->exmem_preg.out.reg_write && (pregs_p->exmem_preg.out.write_rd != 0)) && (pregs_p->exmem_preg.out.write_rd == pregs_p->idex_preg.out.read_rs1)) {
@@ -447,11 +447,11 @@ void gen_forward(pipeline_regs_t *pregs_p, pipeline_wires_t *pwires_p) {
 
   // EX/MEM
   bool exmem_temp_reg_write = pregs_p->exmem_preg.out.reg_write;
-  uint8_t exmem_temp_rd = pregs_p->exmem_preg.out.rd;
+  uint8_t exmem_temp_rd = pregs_p->exmem_preg.out.write_rd;
 
   // WB/MEM
   bool memwb_temp_reg_write = pregs_p->memwb_preg.out.reg_write;
-  uint8_t memwb_temp_rd = pregs_p->memwb_preg.out.rd;
+  uint8_t memwb_temp_rd = pregs_p->memwb_preg.out.write_rd;
 
   // Check EX/MEM stage
 
@@ -515,7 +515,7 @@ void detect_hazard(pipeline_regs_t *pregs_p, pipeline_wires_t *pwires_p, regfile
   ifid_reg_t ifid_data = pregs_p->ifid_preg.out;
   idex_reg_t idex_data = pregs_p->idex_preg.out;
 
-  if (ifid_data.instr_bits != 0 && idex_data.instr_bits != 0 && idex.rd != 0 && idex.mem_read) {
+  if (ifid_data.instr_bits != 0 && idex_data.instr_bits != 0 && idex_data.write_rd != 0 && idex_data.mem_read) {
     // initializing needed variables. We need the destination of data, and also to track if they are being used
 
     // Checks IF/ID instructions to see which registers are being used
@@ -564,7 +564,7 @@ void detect_hazard(pipeline_regs_t *pregs_p, pipeline_wires_t *pwires_p, regfile
 
     // Hazard exist if the ifid_data.rd matches with any of the registered used, read_r#_usage is true and the provided register is not x0
 
-    if (((read_rs1_usage) && (read_rs1 == idex_data.rd) && (read_rs1 != 0)) || ((read_rs2 == idex_data.rd) && (read_rs2_usage) && (read_rs2 != 0))) {
+    if (((read_rs1_usage) && (read_rs1 == idex_data.write_rd) && (read_rs1 != 0)) || ((read_rs2 == idex_data.write_rd) && (read_rs2_usage) && (read_rs2 != 0))) {
       pwires_p->idex_bubble_insert = true;
       pwires_p->stall_insert = true;
       stall_counter++;
@@ -581,7 +581,6 @@ void detect_hazard(pipeline_regs_t *pregs_p, pipeline_wires_t *pwires_p, regfile
 
     if ((gen_branch(idex_data.instr, read_rs1, read_rs2)) && read_rs1 != 0 && read_rs2 != 0) { //Checks if the branch is taken and whether the compared registers are valid (aka, not x0)
       pwires_p->flush_insert = true;
-      break;
     }
 }
 ///////////////////////////////////////////////////////////////////////////////

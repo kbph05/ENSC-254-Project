@@ -151,9 +151,9 @@ typedef struct
 
   int forwardA;
   int forwardB;
-  bool stall_insert = false;
-  bool idex_bubble_insert = false;
-  bool flush_insert = false;
+  bool stall_insert;
+  bool idex_bubble_insert;
+  bool flush_insert;
 
 }pipeline_wires_t;
 

@@ -66,8 +66,8 @@ ifid_reg_t stage_fetch(pipeline_wires_t* pwires_p, regfile_t* regfile_p, Byte* m
   //   regfile_p->PC += 4;
   //   stall_counter++;
   // }
-  if (pwire_p->flush_insert) {
-    ifid_reg.instr_bits = 0x00000013 //set to NOP
+  if (pwires_p->flush_insert) {
+    ifid_reg.instr_bits = 0x00000013; //set to NOP
   } else {
     ifid_reg.instr_bits = instruction_bits;
   }
@@ -112,7 +112,7 @@ idex_reg_t stage_decode(ifid_reg_t ifid_reg, pipeline_wires_t* pwires_p, regfile
 exmem_reg_t stage_execute(idex_reg_t idex_reg, pipeline_wires_t* pwires_p) {
   exmem_reg_t exmem_reg = {0};
   if (pwires_p->flush_insert) {
-    exmem_reg.instr_bits = 0x00000013
+    exmem_reg.instr_bits = 0x00000013; //NOP
   } else {
     exmem_reg.instr_bits = idex_reg.instr_bits;
   }
@@ -155,7 +155,7 @@ memwb_reg_t stage_mem(exmem_reg_t exmem_reg, pipeline_wires_t* pwires_p, Byte* m
 
   // for the debug cycle
   if (pwires_p->flush_insert) {
-    memwb_reg.instr_bits = 0x00000013
+    memwb_reg.instr_bits = 0x00000013;
   } else {
     memwb_reg.instr_bits = exmem_reg.instr_bits;
   }
@@ -276,8 +276,8 @@ void cycle_pipeline(regfile_t* regfile_p, Byte* memory_p, Cache* cache_p, pipeli
    * If more functionality on ecall needs to be added, it can be done
    * by adding more conditions on the value of R[10]
    */
-  if( (pregs_p->memwb_preg.out.instr.bits == 0x00000073) &&
-      (regfile_p->R[10] == 10) )
+  if( (pregs_p->memwb_preg.out.instr_bits == 0x00000073) &&
+      (regfile_p->R[10] == 10) ) 
   {
     *(ecall_exit) = true;
   }
