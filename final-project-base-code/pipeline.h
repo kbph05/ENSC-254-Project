@@ -28,8 +28,8 @@ typedef struct
   Instruction instr;
   uint32_t instr_addr;
   uint32_t instr_bits;
-  unsigned int write_rs1; // write address for rs1
-  unsigned int write_rs2; // write address for rs2
+  uint8_t write_rs1; // write address for rs1
+  uint8_t write_rs2; // write address for rs2
   unsigned int write_rd;
   unsigned int write_imm;
   unsigned int pc;
@@ -56,6 +56,7 @@ typedef struct
   bool alu_src;
 
   bool mem_write;
+  bool branch;
   bool mem_to_reg;
   bool mem_read;
   bool reg_write;
@@ -76,9 +77,9 @@ typedef struct
   // next stage:
   bool mem_read;
   bool mem_write;
-  bool branch;
 
   bool mem_to_reg;
+  bool branch;
   bool reg_write;
 
 }exmem_reg_t;
@@ -91,7 +92,7 @@ typedef struct
   uint32_t instr_addr;
 
   unsigned int alu_result;
-  unsigned int mem_read; //rename
+  unsigned int mem_read;
   unsigned int pc;
   unsigned int read_rs2;
   unsigned int write_rd;
@@ -149,11 +150,16 @@ typedef struct
   uint32_t pc_src0; // adds 4 to PC (for when the next instruction is to be fetched)
   uint32_t pc_src1; // PC += imm (yes branch or j-type)
 
-  int forwardA;
-  int forwardB;
+  uint8_t forwardA;
+  uint8_t forwardB;
   bool stall_insert;
   bool idex_bubble_insert;
   bool flush_insert;
+  int memwb_data;
+
+  int exmem_alu_result;
+  int memwb_write_rd;
+
 
 }pipeline_wires_t;
 

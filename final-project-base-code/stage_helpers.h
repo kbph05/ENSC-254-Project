@@ -309,20 +309,77 @@ idex_reg_t gen_control(Instruction instruction) {
       idex_reg.read_funct3 = instruction.rtype.funct3;
       idex_reg.read_funct7 = instruction.rtype.funct7;
       idex_reg.read_opcode = instruction.opcode;
+      idex_reg.alu_op = true;  
+      idex_reg.alu_src = false;  
+      idex_reg.mem_read = false;
+      idex_reg.mem_write = false;
+      idex_reg.mem_to_reg = false;
+      idex_reg.reg_write = true;
+      idex_reg.branch = false;
       break;
     case 0x23: // S-type
       idex_reg.read_funct3 = instruction.stype.funct3;
       idex_reg.read_opcode = instruction.opcode;
+      idex_reg.alu_op = true;
+      idex_reg.alu_src = true;
+      idex_reg.mem_read = false;
+      idex_reg.mem_write = true;
+      idex_reg.mem_to_reg = false;
+      idex_reg.reg_write = false;
+      idex_reg.branch = false;
       break;
     case 0x13: // I-type
       idex_reg.read_funct3 = instruction.itype.funct3;
       idex_reg.read_opcode = instruction.itype.opcode;
+      idex_reg.alu_op = true;
+      idex_reg.alu_src = true;
+      idex_reg.mem_read = false;
+      idex_reg.mem_write = false;
+      idex_reg.mem_to_reg = false;
+      idex_reg.reg_write = true;
+      idex_reg.branch = false;
       break;
     case 0x63: // B-type
       idex_reg.read_funct3 = instruction.sbtype.funct3;
       idex_reg.read_opcode = instruction.sbtype.opcode;
+      idex_reg.alu_op = true; 
+      idex_reg.alu_src = false;
+      idex_reg.mem_read = false;
+      idex_reg.mem_write = false;
+      idex_reg.mem_to_reg = false;
+      idex_reg.reg_write = false;
+      idex_reg.branch = true;
       break;
-    default: // Remaining opcodes
+    case 0x6F: // JAL
+      idex_reg.alu_op = false;
+      idex_reg.alu_src = false;
+      idex_reg.mem_read = false;
+      idex_reg.mem_write = false;
+      idex_reg.mem_to_reg = false;
+      idex_reg.reg_write = true;
+      idex_reg.branch = true;
+      break;
+    case 0x67: // JALR
+      idex_reg.read_funct3 = instruction.itype.funct3;
+      idex_reg.alu_op = false;
+      idex_reg.alu_src = true;
+      idex_reg.mem_read = false;
+      idex_reg.mem_write = false;
+      idex_reg.mem_to_reg = false;
+      idex_reg.reg_write = true;
+      idex_reg.branch = true;
+      break;
+    case 0x37: // LUI
+      idex_reg.alu_op = false;
+      idex_reg.alu_src = true;
+      idex_reg.mem_read = false;
+      idex_reg.mem_write = false;
+      idex_reg.mem_to_reg = false;
+      idex_reg.reg_write = true;
+      idex_reg.branch = false;
+      break;
+    default:
+      // leave as NOP-like defaults
       break;
   }
   return idex_reg;
@@ -356,6 +413,7 @@ bool gen_branch(Instruction instruction, uint32_t read_rs1, uint32_t read_rs2) {
       default:
         break;
     }
+
   }
   return false;
 
@@ -368,7 +426,7 @@ bool gen_branch(Instruction instruction, uint32_t read_rs1, uint32_t read_rs2) {
  *           based on the pipeline register values.
  * input  : pipeline_regs_t*, pipeline_wires_t*
  * output : None
- * Kirstin
+ * Lex
  */
 void gen_forward(pipeline_regs_t *pregs_p, pipeline_wires_t *pwires_p) {
   /**
@@ -381,40 +439,14 @@ void gen_forward(pipeline_regs_t *pregs_p, pipeline_wires_t *pwires_p) {
   pwires_p->forwardA = 0; //for rs1
   pwires_p->forwardB = 0; // for rs2
 
-  // printf("Checking EX hazard: write_rd = %d, rs1 = %d\n", pregs_p->idex_preg.write_rd, pregs_p->idex_preg.read_rs1);
-  // pregs_p->exmem_preg.out.write_rd, pregs_p->idex_preg.out.read_rs1);
-  
-  // // exmem forwarding
-  // if ((pregs_p->exmem_preg.out.reg_write && (pregs_p->exmem_preg.out.write_rd != 0)) && (pregs_p->exmem_preg.out.write_rd == pregs_p->idex_preg.out.read_rs1)) {
-  //   pwires_p->forwardA = 2; // (Forward from exmem_reg pipe stage)
-
-  //   printf("[FWD]: Resolving EX hazard on RS: x%d\n", pregs_p->idex_preg.out.read_rs1);
-
-  // }
-  // if ((pregs_p->exmem_preg.out.reg_write && (pregs_p->exmem_preg.out.write_rd != 0)) && (pregs_p->exmem_preg.out.write_rd == pregs_p->idex_preg.out.read_rs2)) {
-  //   pwires_p->forwardB = 2; // (Forward from exmem_reg pipe stage)
-    
-  //   printf("[FWD]: Resolving EX hazard on RS: x%dn", pregs_p->idex_preg.out.read_rs2);
-
-  // }
-  
-
-  // // memwb forwarding
-  // if ((pregs_p->memwb_preg.out.reg_write && (pregs_p->memwb_preg.out.write_rd != 0)) && (pregs_p->memwb_preg.out.write_rd == pregs_p->idex_preg.out.read_rs1)) {
-  //   pwires_p->forwardA = 1; // (Forward from memwb_reg pipe stage)
-
-  //   printf("[FWD]: Resolving MEM hazard on RS: x%d\n", pregs_p->idex_preg.out.read_rs1);
-
-  // }
-  // if ((pregs_p->memwb_preg.out.reg_write && (pregs_p->memwb_preg.out.write_rd != 0)) && (pregs_p->memwb_preg.out.write_rd == pregs_p->idex_preg.out.read_rs2)) {
-  //   pwires_p->forwardB = 1; // (Forward from memwb_reg pipe stage)
-  //   printf("[FWD]: Resolving MEM hazard on RS: x%d\n", pregs_p->idex_preg.out.read_rs2);
-
-  // }
   // First check if the function is using rs1 or rs2
   uint8_t temp_rs1 = 0;
   uint8_t temp_rs2 = 0;
-  uint32_t read_opcode = pregs_p->idex_preg.out.instr.opcode;
+  pregs_p->idex_preg.out = pregs_p->idex_preg.inp;
+  uint32_t read_opcode = pregs_p->idex_preg.out.instr.opcode; // opcode is 0!!
+
+  // Print current ID/EX instruction opcode
+  
 
   switch (read_opcode) {
     case 0x33: //R type uses both rs1 and rs2, so need to check those
@@ -441,7 +473,8 @@ void gen_forward(pipeline_regs_t *pregs_p, pipeline_wires_t *pwires_p) {
     default:
       break;
   }
-
+  
+  
   // Set variables to check for reg_write = 1 and check if match_rd =rs1 or rs2, is writing to this destination
   // need to be done on both exmem and wbmem
 
@@ -454,13 +487,13 @@ void gen_forward(pipeline_regs_t *pregs_p, pipeline_wires_t *pwires_p) {
   uint8_t memwb_temp_rd = pregs_p->memwb_preg.out.write_rd;
 
   // Check EX/MEM stage
-
   if (exmem_temp_reg_write != 0 && exmem_temp_rd != 0) {
     if (exmem_temp_rd == temp_rs1) {
       pwires_p->forwardA = 2;
       fwd_exex_counter += 1;
+
       #ifdef DEBUG_CYCLE
-        fprintf("[FWD]: Resolving EX hazard on RS1: x&d\n", temp_rs1);
+      printf("[FWD]: Resolving EX hazard on RS1: x%d\n", temp_rs1);
       #endif
     }
 
@@ -469,26 +502,32 @@ void gen_forward(pipeline_regs_t *pregs_p, pipeline_wires_t *pwires_p) {
         if (exmem_temp_rd == temp_rs2) {
           pwires_p->forwardB = 2;
           fwd_exex_counter += 1;
+
           #ifdef DEBUG_CYCLE
-          fprintf("[FWD]: Resolving EX hazard on RS2: x&d\n", temp_rs2);
+          printf("[FWD]: Resolving EX hazard on RS2: x%d\n", temp_rs2);
           #endif
         }
       }
   }
   // Check for MEM/WB stage now
-  if (memwb_temp_reg_write != 0 && memwb_temp_rd != 0) {
+  if (memwb_temp_reg_write && memwb_temp_rd != 0) {
     if ((memwb_temp_rd == temp_rs1) && (pwires_p->forwardA == 0)) {
       pwires_p->forwardA = 1;
+      fwd_exmem_counter += 1;
+      #ifdef DEBUG_CYCLE
+      printf("[FWD]: Resolving MEM hazard on RS1: x%d\n", temp_rs1);
+      #endif
     }
     if ((read_opcode == 0x33) || (read_opcode == 0x23) || (read_opcode == 0x63)) {
-        if ((memwb_temp_rd == temp_rs2) && (pwires_p->forwardB == 0)) {
-          pwires_p->forwardB = 2;
-          fwd_exex_counter += 1;
-          #ifdef DEBUG_CYCLE
-          fprintf("[FWD]: Resolving EX hazard on RS2: x&d\n", temp_rs2);
-          #endif
-        }
+      if ((memwb_temp_rd == temp_rs2) && (pwires_p->forwardB == 0)) {
+        pwires_p->forwardB = 1;
+        fwd_exmem_counter += 1;
+        #ifdef DEBUG_CYCLE
+
+        printf("[FWD]: Resolving MEM hazard on RS2: x%d\n", temp_rs2);
+        #endif
       }
+    }
   }
 }
 /**
@@ -499,22 +538,28 @@ void gen_forward(pipeline_regs_t *pregs_p, pipeline_wires_t *pwires_p) {
  * Lex
  */
 void detect_hazard(pipeline_regs_t *pregs_p, pipeline_wires_t *pwires_p, regfile_t *regfile_p) {
-  printf("detect_hazard() called\n");
   gen_forward(pregs_p, pwires_p);
   uint8_t read_rs1 = 0;
   uint8_t read_rs2 = 0;
   bool read_rs1_usage = false;
   bool read_rs2_usage = false;
-// LOAD USE HAZARD
+  bool load_use_hazard = false;
+  bool load_mem_read = pregs_p->idex_preg.out.mem_read;
 
-  pwires_p->idex_bubble_insert = false; // reset code
+  // LOAD USE HAZARD
+  // Reset stall and bubble signals at start
+  pwires_p->idex_bubble_insert = false;
   pwires_p->stall_insert = false;
+  pwires_p->flush_insert = false;  // Also reset flush
 
   // Extract current values
   ifid_reg_t ifid_data = pregs_p->ifid_preg.out;
   idex_reg_t idex_data = pregs_p->idex_preg.out;
+  uint32_t load_rd = idex_data.write_rd;
+  if (ifid_data.instr_bits == 0 && idex_data.instr_bits == 0 && idex_data.write_rd != 0 && idex_data.mem_read) {
+    return false;
+  }
 
-  if (ifid_data.instr_bits != 0 && idex_data.instr_bits != 0 && idex_data.write_rd != 0 && idex_data.mem_read) {
     // initializing needed variables. We need the destination of data, and also to track if they are being used
 
     // Checks IF/ID instructions to see which registers are being used
@@ -525,34 +570,28 @@ void detect_hazard(pipeline_regs_t *pregs_p, pipeline_wires_t *pwires_p, regfile
         read_rs1_usage = true;
         read_rs2_usage = true;
         break;
-
-
       case 0x13: //I type without load
         read_rs1 = ifid_data.instr.itype.rs1;
         read_rs1_usage = true;
         break;
         // rs2 is just an immediate
-
       case 0x03: //Load
         read_rs1 = ifid_data.instr.itype.rs1;
         read_rs1_usage = true;
         break;
         // once again, rs2 is an immedaite
-
       case 0x23: //store
         read_rs1 = ifid_data.instr.stype.rs1;
         read_rs2 = ifid_data.instr.stype.rs2;
         read_rs1_usage = true;
         read_rs2_usage = true;
         break;
-
       case 0x63: //Branch
         read_rs1 = ifid_data.instr.sbtype.rs1;
         read_rs2 = ifid_data.instr.sbtype.rs2;
         read_rs1_usage = true;
         read_rs2_usage = true;
         break;
-
       case 0x67: //JALR
         read_rs1 = ifid_data.instr.itype.rs1;
         read_rs1_usage = true;
@@ -561,26 +600,32 @@ void detect_hazard(pipeline_regs_t *pregs_p, pipeline_wires_t *pwires_p, regfile
         break; //Everything else does not use a register
     }
 
-    // Hazard exist if the ifid_data.rd matches with any of the registered used, read_r#_usage is true and the provided register is not x0
+  //     printf("Load-use hazard check:\n");
+  // printf("IF/ID opcode: 0x%02x\n", ifid_data.instr.opcode);
+  // printf("read_rs1 = x%d, read_rs2 = x%d\n", read_rs1, read_rs2);
+  // printf("ID/EX mem_read = %d, write_rd = x%d\n", idex_data.mem_read, idex_data.write_rd);  
 
-    if (((read_rs1_usage) && (read_rs1 == idex_data.write_rd) && (read_rs1 != 0)) || ((read_rs2 == idex_data.write_rd) && (read_rs2_usage) && (read_rs2 != 0))) {
+    // Hazard exist if the ifid_data.rd matches with any of the registered used, read_r#_usage is true and the provided register is not x0
+      if ((read_rs1_usage && read_rs1 != 0 && read_rs1 == load_rd) || (read_rs2_usage && read_rs2 != 0 && read_rs2 == load_rd)) {
+        load_use_hazard = true;
+      }
+    
+
+    if (load_use_hazard) {
       pwires_p->idex_bubble_insert = true;
       pwires_p->stall_insert = true;
       stall_counter++;
-
 
       #ifdef DEBUG_CYCLE
       printf("[HZD]: Stalling and rewriting PC: 0x%08x\n", ifid_data.instr_addr);
       #endif
     }
 
-  }
   // Control Hazard
-
-
-    if ((gen_branch(idex_data.instr, read_rs1, read_rs2)) && read_rs1 != 0 && read_rs2 != 0) { //Checks if the branch is taken and whether the compared registers are valid (aka, not x0)
+    if (gen_branch(idex_data.instr, read_rs1, read_rs2) && read_rs1 != 0 && read_rs2 != 0) { //Checks if the branch is taken and whether the compared registers are valid (aka, not x0)
       pwires_p->flush_insert = true;
     }
+    
 }
 ///////////////////////////////////////////////////////////////////////////////
 
