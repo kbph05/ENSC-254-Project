@@ -143,15 +143,13 @@ exmem_reg_t stage_execute(idex_reg_t idex_reg, pipeline_wires_t* pwires_p) {
     exmem_reg.instr_bits = idex_reg.instr_bits;
   }
   uint32_t alu_control_signal; // control signal for the alu unit
-  uint32_t alu_inp2; // second input (could be imm or rs2)
+  uint32_t alu_inp2 = 0; // second input (could be imm or rs2)
 
   exmem_reg.instr_bits = idex_reg.instr_bits;  
   exmem_reg.write_rd = idex_reg.write_rd; 
   exmem_reg.instr = idex_reg.instr;
   exmem_reg.instr_addr = idex_reg.instr_addr;
-  exmem_reg.pc = idex_reg.pc; 
-  alu_control_signal = gen_alu_control(idex_reg);
-  
+
 
   /*
   MS1:
@@ -190,6 +188,8 @@ exmem_reg_t stage_execute(idex_reg_t idex_reg, pipeline_wires_t* pwires_p) {
     default:
       break;
   }
+  // forwarded value getsput into exmem_Reg
+  exmem_reg.read_rs2 = alu_inp2; 
 
   // cases for instructions that dont use the ALU, and if they do they just follow the default:
   switch(exmem_reg.instr.opcode) {
@@ -218,25 +218,14 @@ exmem_reg_t stage_execute(idex_reg_t idex_reg, pipeline_wires_t* pwires_p) {
   // for forwarding in future, store the actual value that will be written back (either loaded data or ALU result)
   pwires_p->exmem_alu_result = exmem_reg.alu_result;
 
+  // branch condition for b-type instructions
   if (idex_reg.branch && idex_reg.instr.opcode == 0x63) {
-    bool branch = false;
-    switch(idex_reg.instr.sbtype.funct3) {
-      case 0x0: // BEQ
-        branch = (exmem_reg.read_rs1 == exmem_reg.read_rs2);
-        break;
-      case 0x1: // BNE
-        branch = (exmem_reg.read_rs1 != exmem_reg.read_rs2);
-        break;
+    if (gen_branch(idex_reg.instr, exmem_reg.read_rs1, exmem_reg.read_rs2)) {
+      pwires_p->pc_src1 = (uint32_t)(idex_reg.read_imm + idex_reg.instr_addr);
+      pwires_p->pcsrc = true;
+      branch_counter++;
     }
   }
-
-  // branch condition for b-type instructions
-  if (gen_branch(idex_reg.instr, idex_reg.read_rs1, idex_reg.read_rs2)) {
-    pwires_p->pc_src1 = (uint32_t)(idex_reg.read_imm + idex_reg.instr_addr);
-    pwires_p->pcsrc = true;
-    branch_counter++;
-  }
-
 
   #ifdef DEBUG_CYCLE
   printf("[EX ]: Instruction [%08x]@[%08x]: ", exmem_reg.instr_bits, exmem_reg.pc);
@@ -267,18 +256,22 @@ memwb_reg_t stage_mem(exmem_reg_t exmem_reg, pipeline_wires_t* pwires_p, Byte* m
   memwb_reg.instr_addr = exmem_reg.instr_addr;
   memwb_reg.alu_result = exmem_reg.alu_result;
   memwb_reg.write_rd = exmem_reg.write_rd;
-  memwb_reg.read_rs2 = exmem_reg.read_rs2;
-  memwb_reg.instr = exmem_reg.instr;
-  memwb_reg.pc = exmem_reg.pc;
+
+  // memwb_reg.read_rs2 = exmem_reg.read_rs2;
+  // memwb_reg.instr = exmem_reg.instr;
+  // memwb_reg.pc = exmem_reg.pc;
 
   // transfer control signals from last cycle
   memwb_reg.reg_write = exmem_reg.reg_write;
   memwb_reg.mem_to_reg = exmem_reg.mem_to_reg;
 
-  // For forwarding, store the actual value that will be written back (either loaded data or ALU result)
-  int wb_data = memwb_reg.mem_to_reg ? (int)memwb_reg.mem_read : (int)memwb_reg.alu_result;
-  pwires_p->memwb_write_rd = wb_data;
-
+  // For forwarding, put the *value* that will be written into memwb_write_rd
+  if (memwb_reg.mem_to_reg) {
+    pwires_p->memwb_write_rd = 0;
+  } else {
+    //forward immediately
+    pwires_p->memwb_write_rd = memwb_reg.alu_result;
+  }
 
   // get the alignment for word value in memory
   Alignment alignment;
@@ -389,6 +382,7 @@ void cycle_pipeline(regfile_t* regfile_p, Byte* memory_p, Cache* cache_p, pipeli
    * If more functionality on ecall needs to be added, it can be done
    * by adding more conditions on the value of R[10]
    */
+   
   if((pregs_p->memwb_preg.out.instr_bits == 0x00000073) && (regfile_p->R[10] == 10)) 
   {
     *(ecall_exit) = true;

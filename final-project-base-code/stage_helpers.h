@@ -303,7 +303,7 @@ uint32_t gen_imm(Instruction instruction) {
  **/
 idex_reg_t gen_control(Instruction instruction) {
   idex_reg_t idex_reg = {0};
-  // get the opcode instruction, determine what the register idex_reg needs to hold
+  // get the opcode instruction, determine what the register idex_reg needs to hold and what control signals are needed
   switch (instruction.opcode) {
     case 0x33: // R-type
       idex_reg.read_funct3 = instruction.rtype.funct3;
@@ -379,7 +379,6 @@ idex_reg_t gen_control(Instruction instruction) {
       idex_reg.branch = false;
       break;
     default:
-      // leave as NOP-like defaults
       break;
   }
   return idex_reg;
@@ -429,65 +428,31 @@ bool gen_branch(Instruction instruction, uint32_t read_rs1, uint32_t read_rs2) {
  * Lex
  */
 void gen_forward(pipeline_regs_t *pregs_p, pipeline_wires_t *pwires_p) {
-  /**
-   * 1. EX Hazard: When resolving an EX hazard (which will require a forwarding from EXMEM 
-        register  to  the  EX  stage),  the  simulator  should  print  the  following  line: “[FWD]: Resolving EX hazard on RS: xREG” 
-     
-        2. MEM  Hazard:  When  resolving  a  MEM  hazard  (which  will  require  a  forwarding  from 
-        MEMWB  register  to  the  EX  stage),  the  simulator  should  print  the  following  line: “[FWD]: Resolving MEM hazard on RS: xREG” 
-   */
+ 
   pwires_p->forwardA = 0; //for rs1
   pwires_p->forwardB = 0; // for rs2
 
   // First check if the function is using rs1 or rs2
-  uint8_t temp_rs1 = 0;
-  uint8_t temp_rs2 = 0;
+  uint8_t temp_rs1 = pregs_p->idex_preg.out.instr.rtype.rs1;
+  uint8_t temp_rs2 = pregs_p->idex_preg.out.instr.rtype.rs2;
   pregs_p->idex_preg.out = pregs_p->idex_preg.inp;
   uint32_t read_opcode = pregs_p->idex_preg.out.instr.opcode; // opcode is 0!!
-
-  // Print current ID/EX instruction opcode
-  
-
-  switch (read_opcode) {
-    case 0x33: //R type uses both rs1 and rs2, so need to check those
-      temp_rs1 = pregs_p->idex_preg.out.instr.rtype.rs1;
-      temp_rs2 = pregs_p->idex_preg.out.instr.rtype.rs2;
-      break;
-    case 0x13: // I type without load, rs2 is just an immediate
-      temp_rs1 = pregs_p->idex_preg.out.instr.itype.rs1;
-      break;
-    case 0x03: // Load, rs2 excluded since only importing data to rs1
-      temp_rs1 = pregs_p->idex_preg.out.instr.itype.rs1;
-      break;
-    case 0x23: // Store
-      temp_rs1 = pregs_p->idex_preg.out.instr.stype.rs1;
-      temp_rs2 = pregs_p->idex_preg.out.instr.stype.rs2;
-      break;
-    case 0x63: // Branch
-      temp_rs1 = pregs_p->idex_preg.out.instr.sbtype.rs1;
-      temp_rs2 = pregs_p->idex_preg.out.instr.sbtype.rs2;
-      break;
-    case 0x67: // JALR, SKIPPED JAL CUZ IT DOESN'T USE ANY
-      temp_rs1 = pregs_p->idex_preg.out.instr.itype.rs1;
-      break;
-    default:
-      break;
-  }
-  
   
   // Set variables to check for reg_write = 1 and check if match_rd =rs1 or rs2, is writing to this destination
   // need to be done on both exmem and wbmem
 
-  // EX/MEM
+  /////// EX/MEM ///////
   bool exmem_temp_reg_write = pregs_p->exmem_preg.out.reg_write;
   uint8_t exmem_temp_rd = pregs_p->exmem_preg.out.write_rd;
 
-  // WB/MEM
+  /////// WB/MEM ///////
   bool memwb_temp_reg_write = pregs_p->memwb_preg.out.reg_write;
   uint8_t memwb_temp_rd = pregs_p->memwb_preg.out.write_rd;
 
+
   // Check EX/MEM stage
-  if (exmem_temp_reg_write != 0 && exmem_temp_rd != 0) {
+  if (exmem_temp_reg_write && exmem_temp_rd != 0) {
+
     if (exmem_temp_rd == temp_rs1) {
       pwires_p->forwardA = 2;
       fwd_exex_counter += 1;
@@ -497,18 +462,21 @@ void gen_forward(pipeline_regs_t *pregs_p, pipeline_wires_t *pwires_p) {
       #endif
     }
 
-  // This essentially checks if the alu src if the opcode uses rs2 (checcks validity of rs2)
+    // This essentially checks if the alu src if the opcode uses rs2 (checcks validity of rs2)
     if ((read_opcode == 0x33) || (read_opcode == 0x23) || (read_opcode == 0x63)) {
-        if (exmem_temp_rd == temp_rs2) {
-          pwires_p->forwardB = 2;
-          fwd_exex_counter += 1;
+      if (exmem_temp_rd == temp_rs2) {
+        pwires_p->forwardB = 2;
+        fwd_exex_counter += 1;
 
-          #ifdef DEBUG_CYCLE
-          printf("[FWD]: Resolving EX hazard on RS2: x%d\n", temp_rs2);
-          #endif
-        }
+        #ifdef DEBUG_CYCLE
+        printf("[FWD]: Resolving EX hazard on RS2: x%d\n", temp_rs2);
+        #endif
       }
+    }
+
   }
+
+
   // Check for MEM/WB stage now
   if (memwb_temp_reg_write && memwb_temp_rd != 0) {
     if ((memwb_temp_rd == temp_rs1) && (pwires_p->forwardA == 0)) {
@@ -523,12 +491,13 @@ void gen_forward(pipeline_regs_t *pregs_p, pipeline_wires_t *pwires_p) {
         pwires_p->forwardB = 1;
         fwd_exmem_counter += 1;
         #ifdef DEBUG_CYCLE
-
         printf("[FWD]: Resolving MEM hazard on RS2: x%d\n", temp_rs2);
         #endif
       }
     }
   }
+
+
 }
 /**
  * Task   : Sets the pipeline wires for the hazard unit's control signals
@@ -539,14 +508,14 @@ void gen_forward(pipeline_regs_t *pregs_p, pipeline_wires_t *pwires_p) {
  */
 void detect_hazard(pipeline_regs_t *pregs_p, pipeline_wires_t *pwires_p, regfile_t *regfile_p) {
   gen_forward(pregs_p, pwires_p);
-  uint8_t read_rs1 = 0;
-  uint8_t read_rs2 = 0;
+
   bool read_rs1_usage = false;
   bool read_rs2_usage = false;
   bool load_use_hazard = false;
   bool load_mem_read = pregs_p->idex_preg.out.mem_read;
 
-  // LOAD USE HAZARD
+  /////// LOAD USE HAZARD ///////
+
   // Reset stall and bubble signals at start
   pwires_p->idex_bubble_insert = false;
   pwires_p->stall_insert = false;
@@ -555,76 +524,31 @@ void detect_hazard(pipeline_regs_t *pregs_p, pipeline_wires_t *pwires_p, regfile
   // Extract current values
   ifid_reg_t ifid_data = pregs_p->ifid_preg.out;
   idex_reg_t idex_data = pregs_p->idex_preg.out;
+  idex_reg_t idex = pregs_p->idex_preg.out;
+
+  // initializing needed variables
+  uint8_t read_rs1 = ifid_data.instr.rtype.rs1;
+  uint8_t read_rs2 = ifid_data.instr.rtype.rs2;
   uint32_t load_rd = idex_data.write_rd;
+  
   if (ifid_data.instr_bits == 0 && idex_data.instr_bits == 0 && idex_data.write_rd != 0 && idex_data.mem_read) {
     return false;
   }
 
-    // initializing needed variables. We need the destination of data, and also to track if they are being used
+  // Hazard exist if the idex.write_rd matches with any of the registered used, read_r#_usage is true and the provided register is not x0
+  if (idex.mem_read && idex.write_rd != 0 && (idex.write_rd == read_rs1 || idex.write_rd == read_rs2)) {
+    pwires_p->stall_insert = true;
+    pwires_p->pc_src0 =- 4;
+    stall_counter++;
+    #ifdef DEBUG_CYCLE
+    printf("[HZD]: Stalling and rewriting PC: 0x%08x\n", ifid_data.instr_addr);
+    #endif
+  }
 
-    // Checks IF/ID instructions to see which registers are being used
-    switch (ifid_data.instr.opcode) {
-      case 0x33: //R type
-        read_rs1 = ifid_data.instr.rtype.rs1;
-        read_rs2 = ifid_data.instr.rtype.rs2;
-        read_rs1_usage = true;
-        read_rs2_usage = true;
-        break;
-      case 0x13: //I type without load
-        read_rs1 = ifid_data.instr.itype.rs1;
-        read_rs1_usage = true;
-        break;
-        // rs2 is just an immediate
-      case 0x03: //Load
-        read_rs1 = ifid_data.instr.itype.rs1;
-        read_rs1_usage = true;
-        break;
-        // once again, rs2 is an immedaite
-      case 0x23: //store
-        read_rs1 = ifid_data.instr.stype.rs1;
-        read_rs2 = ifid_data.instr.stype.rs2;
-        read_rs1_usage = true;
-        read_rs2_usage = true;
-        break;
-      case 0x63: //Branch
-        read_rs1 = ifid_data.instr.sbtype.rs1;
-        read_rs2 = ifid_data.instr.sbtype.rs2;
-        read_rs1_usage = true;
-        read_rs2_usage = true;
-        break;
-      case 0x67: //JALR
-        read_rs1 = ifid_data.instr.itype.rs1;
-        read_rs1_usage = true;
-        break;
-      default:
-        break; //Everything else does not use a register
-    }
-
-  //     printf("Load-use hazard check:\n");
-  // printf("IF/ID opcode: 0x%02x\n", ifid_data.instr.opcode);
-  // printf("read_rs1 = x%d, read_rs2 = x%d\n", read_rs1, read_rs2);
-  // printf("ID/EX mem_read = %d, write_rd = x%d\n", idex_data.mem_read, idex_data.write_rd);  
-
-    // Hazard exist if the ifid_data.rd matches with any of the registered used, read_r#_usage is true and the provided register is not x0
-      if ((read_rs1_usage && read_rs1 != 0 && read_rs1 == load_rd) || (read_rs2_usage && read_rs2 != 0 && read_rs2 == load_rd)) {
-        load_use_hazard = true;
-      }
-    
-
-    if (load_use_hazard) {
-      pwires_p->idex_bubble_insert = true;
-      pwires_p->stall_insert = true;
-      stall_counter++;
-
-      #ifdef DEBUG_CYCLE
-      printf("[HZD]: Stalling and rewriting PC: 0x%08x\n", ifid_data.instr_addr);
-      #endif
-    }
-
-  // Control Hazard
-    if (gen_branch(idex_data.instr, read_rs1, read_rs2) && read_rs1 != 0 && read_rs2 != 0) { //Checks if the branch is taken and whether the compared registers are valid (aka, not x0)
-      pwires_p->flush_insert = true;
-    }
+  // Control Hazard - Checks if the branch is taken and whether the compared registers are valid (aka, not x0)
+  if (gen_branch(idex_data.instr, read_rs1, read_rs2) && read_rs1 != 0 && read_rs2 != 0) { 
+    pwires_p->flush_insert = true;
+  }
     
 }
 ///////////////////////////////////////////////////////////////////////////////
